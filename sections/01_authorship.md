@@ -2,7 +2,7 @@
 
 # Declaration of Authorship {-}
 
-I, Christoph Bühler, declare that this project report titled, "Distributed Authentication Mesh" and the work presented in it are my own.
+I, Christoph Bühler, declare that this project report titled, “Distributed Authentication Mesh” and the work presented in it are my own.
 
 I confirm that:
 

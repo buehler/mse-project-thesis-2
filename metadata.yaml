@@ -22,7 +22,7 @@ toc: true
 numbersections: true
 lof: true
 lot: true
-bibliography: bibliography.bib
+bibliography: [bibliography.bib]
 thanks: I'd like to say thank you :)
 header-includes: |
   \usepackage{float}
