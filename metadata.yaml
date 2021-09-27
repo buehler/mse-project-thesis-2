@@ -1,0 +1,53 @@
+# Metadata
+title: Distributed Authentication Mesh
+subtitle: Some SubTitle
+author: Christoph Bühler
+date: |
+  Autumn Semester 2021\
+  University of Applied Science of Eastern Switzerland (OST)
+lang: en-US
+keywords:
+  - Authentication
+  - Distributed
+  - Trust Zone
+  - Microservices
+  - Kubernetes
+reference-section-title: Bibliography
+csl: ieee-software.csl
+abstract: |
+  This is the next application of the distributed auth mesh.
+  TODO!
+
+# Latex config
+papersize: a4
+documentclass: scrartcl
+toc: true
+numbersections: true
+lof: true
+lot: true
+bibliography: bibliography.bib
+thanks: I'd like to say thank you :)
+header-includes: |
+  \usepackage{float}
+  \let\origfigure\figure
+  \let\endorigfigure\endfigure
+  \renewenvironment{figure}[1][2] {
+      \expandafter\origfigure\expandafter[H]
+  } {
+      \endorigfigure
+  }
+
+# Tool configuration
+fignos-cleveref: true
+fignos-plus-name: Figure
+fignos-star-name: figure
+secnos-cleveref: true
+secnos-plus-name:
+  section: Section
+  chapter: Chapter
+secnos-star-name:
+  section: section
+  chapter: chapter
+tablenos-cleveref: true
+tablenos-plus-name: Table
+tablenos-star-name: table
