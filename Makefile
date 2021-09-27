@@ -30,7 +30,7 @@ clean_diagrams: $(call rwildcard,diagrams,*.png)
 clean_build:
 	@echo "Clean build directory."
 	@rm -rf ./public
-	@mkdir ./public
+	@mkdir -p ./public
 
 
 build: html pdf
@@ -38,6 +38,7 @@ build: html pdf
 
 build_html:
 	@echo "Build HTML version"
+	@mkdir -p ./public
 	@pandoc ${common_build_args} --toc --output=public/index.html ${sections}
 	@cp -R images public/
 	# @cp -R diagrams public/
@@ -49,6 +50,7 @@ html: build_html
 
 build_pdf:
 	@echo "Build PDF version"
+	@mkdir -p ./public
 	@pandoc ${common_build_args} --output=public/report.pdf ${sections}
 
 
