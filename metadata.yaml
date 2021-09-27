@@ -1,5 +1,5 @@
 # Metadata
-title: Distributed Authentication Mesh
+title: Title
 subtitle: Some SubTitle
 author: Christoph Bühler
 date: |
@@ -14,9 +14,6 @@ keywords:
   - Kubernetes
 reference-section-title: Bibliography
 csl: ieee-software.csl
-abstract: |
-  This is the next application of the distributed auth mesh.
-  TODO!
 
 # Latex config
 papersize: a4

@@ -2,16 +2,17 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 
 sections = $(wildcard sections/*.md)
 common_build_args = \
-	--lua-filter=lib/lua-filters/include-files/include-files.lua \
+	--lua-filter=lua-filters/abstract-to-meta.lua \
+	--lua-filter=lua-filters/include-files.lua \
 	--filter pandoc-xnos \
-	--lua-filter=lib/custom/plantuml-converter.lua \
-	--lua-filter=lib/lua-filters/short-captions/short-captions.lua \
+	--lua-filter=lua-filters/short-captions.lua \
 	--metadata-file=./metadata.yaml \
 	--citeproc \
 	--standalone
 
 
 .PHONY: default clean clean_diagrams clean_build build build_html build_pdf build_sections force pdf html
+
 
 default: clean_build build
 
@@ -33,23 +34,27 @@ clean_build:
 	@mkdir ./public
 
 
-build: build_pdf build_html
+build: html pdf
 
 
 build_html:
 	@echo "Build HTML version"
 	@pandoc ${common_build_args} --toc --output=public/index.html ${sections}
 	@cp -R images public/
-	@cp -R diagrams public/
+	# @cp -R diagrams public/
 	@rm -rf public/diagrams/.gitignore
 
+
 html: build_html
+
 
 build_pdf:
 	@echo "Build PDF version"
 	@pandoc ${common_build_args} --output=public/report.pdf ${sections}
 
+
 pdf: build_pdf
+
 
 sections/%.md: force
 	@echo "Build section $@ to pdf"
@@ -57,5 +62,6 @@ sections/%.md: force
 		--metadata-file=./section-metadata.yaml \
 		--output=public/$(patsubst sections/%,%,$(patsubst %.md,%.pdf,$(@))) \
 		$@
+
 
 build_sections: $(foreach section,$(sections),$(section))
