@@ -2,7 +2,7 @@ reference-section-title: Bibliography
 
 # Latex config
 papersize: a4
-documentclass: scrreprt
+documentclass: scrartcl
 toc: false
 numbersections: false
 lof: false
@@ -15,8 +15,12 @@ fignos-cleveref: true
 fignos-plus-name: Figure
 fignos-star-name: figure
 secnos-cleveref: true
-secnos-plus-name: Section
-secnos-star-name: section
+secnos-plus-name:
+  section: Section
+  chapter: Chapter
+secnos-star-name:
+  section: section
+  chapter: chapter
 tablenos-cleveref: true
 tablenos-plus-name: Table
 tablenos-star-name: table
