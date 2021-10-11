@@ -6,7 +6,8 @@
     "start": "concurrently -k npm:nodemon npm:server",
     "nodemon": "nodemon --config nodemon.json --exec \"make html\"",
     "nodemon:pdf": "nodemon --config nodemon.json --exec \"make pdf\"",
-    "server": "http-server public -o"
+    "server": "http-server public -o",
+    "pdf": "make pdf"
   },
   "dependencies": {
     "concurrently": "6.2.1",
