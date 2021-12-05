@@ -8,6 +8,18 @@ This section provides general information about the project, the context, and pr
 
 While the project "Distributed Authentication Mesh" addressed the problem of declarative conversion of user credentials (like an access token from an identity provider) [@buehler:DistAuthMesh], this project focuses on the "common language format" that is mentioned in the former project. This project provides an analysis of various methods to specify and implement such a common language and gives an implementation for the selected common format. Additionally, it extends the authentication mesh with a rule engine that allows conditional access control to the destinations of the mesh. As an example, one could configure specific IP ranges that are blocked, specific times when access is allowed or completely free logic with the help of a scripting language^[Such as Lua: <https://www.lua.org/>].
 
+in scope:
+
+- pki
+- signed JWT
+- communication
+
+out of scope:
+
+- service mesh (service discovery)
+- auth PKI
+- cert revoke etc.
+
 ## Kubernetes and its Patterns
 
 This section provides knowledge about Kubernetes and two patterns that are used with Kubernetes. Kubernetes itself manages workloads and load balances them on several nodes while the patterns enable more complex applications and use-cases.
