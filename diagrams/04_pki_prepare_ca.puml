@@ -1,0 +1,20 @@
+@startuml
+!theme cerulean
+
+participant "Public Key Infrastructure" as pki
+
+[-> pki: Start-Up
+
+pki -> pki: PrepareCA()
+activate pki
+    alt Runs in Kubernetes
+        pki -> pki: Prepare Secret
+    end
+    alt Certificate and Key Exist
+        pki -> pki: Load CA Certificate\nand Private Key
+    else Certificate must be created
+        pki -> pki: Create CA Certificate\nand Private Key
+        pki -> pki: Store created Certificate\nand Private Key
+    end
+
+@enduml

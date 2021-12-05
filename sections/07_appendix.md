@@ -1,5 +1,5 @@
 \newpage
 
-# Appendix A - if any {.unnumbered}
+# Appendix A: Installation and Usage of the Mesh on Kubernetes {.unnumbered}
 
-Some Appendix
+TODO: describe how the operator is installed in Kubernetes and how one can use the mesh

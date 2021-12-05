@@ -5,6 +5,7 @@ common_build_args = \
 	--lua-filter=lua-filters/abstract-to-meta.lua \
 	--lua-filter=lua-filters/include-files.lua \
 	--filter pandoc-xnos \
+	--lua-filter=lua-filters/plantuml-converter.lua \
 	--lua-filter=lua-filters/short-captions.lua \
 	--metadata-file=./metadata.yaml \
 	--citeproc \
