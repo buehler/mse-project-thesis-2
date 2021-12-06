@@ -1,0 +1,8 @@
+@startuml
+!theme cerulean-outline
+
+entity "Identity (JWT)" {
+  String Subject
+}
+
+@enduml

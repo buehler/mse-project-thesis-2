@@ -1,20 +1,25 @@
 @startuml
-!theme cerulean
+!theme cerulean-outline
 
-participant "Public Key Infrastructure" as pki
+start
 
-[-> pki: Start-Up
+if (Is Local Mode?) then (no)
+    :Check/Initialize
+    Kubernetes Secret;
+endif
 
-pki -> pki: PrepareCA()
-activate pki
-    alt Runs in Kubernetes
-        pki -> pki: Prepare Secret
-    end
-    alt Certificate and Key Exist
-        pki -> pki: Load CA Certificate\nand Private Key
-    else Certificate must be created
-        pki -> pki: Create CA Certificate\nand Private Key
-        pki -> pki: Store created Certificate\nand Private Key
-    end
+if (CA Certificate and Key exists?) then (yes)
+    :Load Certificate
+    and Key;
+else (no)
+    :Create Certificate
+    and Key;
+    :Store Certificate
+    and Key;
+    :Load Certificate
+    and Key;
+endif
+
+stop
 
 @enduml

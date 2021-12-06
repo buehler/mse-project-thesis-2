@@ -1,0 +1,11 @@
+@startuml
+!theme cerulean-outline
+
+actor Translator as t
+usecase (Fetch CA Certificate) as u1
+usecase (Sign Certificate Signing Request) as u2
+
+t --> u1
+t --> u2
+
+@enduml

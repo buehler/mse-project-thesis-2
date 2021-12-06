@@ -42,7 +42,7 @@ build_html:
 	@mkdir -p ./public
 	@pandoc ${common_build_args} --toc --output=public/index.html ${sections}
 	@cp -R images public/
-	# @cp -R diagrams public/
+	@cp -R diagrams public/
 	@rm -rf public/diagrams/.gitignore
 
 

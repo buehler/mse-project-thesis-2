@@ -1,0 +1,18 @@
+@startuml
+!theme cerulean-outline
+
+participant "Application" as a
+participant "Translator" as t
+participant "Destination" as d
+
+a -> t: Create request
+activate t
+    t -> t: Check if "Authorization"\nheader is set
+    t -> t: Try to find UserID\nfor auth header
+    note right
+        The header format is correct
+        but no user is found.
+    end note
+    return Forbidden: no userID given
+
+@enduml

@@ -2,7 +2,7 @@
 
 # Implementing a Common Language and Conditional Access
 
-This section analyzes different approaches to create a common language format between the service of the "Distributed Authentication Mesh". After the analysis, the definition and implementation of the common format enhances the general concept of the Mesh and enables a production-grade software. The PKI and the translators are written in Go, while the Kubernetes Operator is written in C\#. All software is licensed under the **Apache-2.0** license and can be found in the "WirePact" organization: https://github.com/WirePact.
+This section analyzes different approaches to create a common language format between the service of the "Distributed Authentication Mesh". After the analysis, the definition and implementation of the common format enhances the general concept of the Mesh and enables a production-grade software. The PKI and the translators are written in Go, while the Kubernetes Operator is written in C\#. All software is licensed under the **Apache-2.0** license and can be found in the "WirePact" organization: <https://github.com/WirePact>.
 
 ## Goals and Non-Goals of the Project
 
@@ -36,7 +36,7 @@ Similar to "SecJSON", one could add special fields into XML and/or YAML to trans
 
 The x509 standard (**RFC5280**) defines how certificates shall be used. Today, the connection over HTTPS is done via TLS and certificate encryption. The fields in a certificate are only partially defined. These "standard extensions" are well-known fields such as the "authority" or alternative names for the subject. In the specification, "private extensions" are another possibility to encode data into certificates [@RFC5280, seq. 4.2]. These extensions could be used to transmit the data needed for the distributed authentication mesh.
 
-Certificates have the big advantage: they can be integrity checked via already implemented hashing mechanisms and provide a "trust anchor"^[A trust anchor is a root for all trust in the system.] in the form of a root certificate authority (root CA). Furthermore, if certificates would be used to transmit the users identity within the authentication mesh, the certificates could also be used to harden the communication between two services. The certificates can enable mutual TLS (mTLS) between communicating services.
+Certificates have the big advantage: they can be integrity checked via already implemented hashing mechanisms and provide a "trust anchor"^[A trust anchor is a root for all trust in the system.] in the form of a root certificate authority (root CA). Furthermore, if certificates would be used to transmit the users' identity within the authentication mesh, the certificates could also be used to harden the communication between two services. The certificates can enable mutual TLS (mTLS) between communicating services.
 
 But, implementing custom private fields and manipulating that data is cumbersome in various programming languages. In C\# for example, the code to create a simple x509 certificate can span several hundred lines of code. Go^[<https://go.dev/>] on the other hand, has a much better support for manipulating x509 certificates. Since the result of this project should have a good developer experience, using x509 certificates is not be the best solution to solve the communication and integrity issue.
 
@@ -48,7 +48,7 @@ To make use of JWTs in the distributed authentication mesh, another technique fo
 
 ### Using JWT in the Authentication Mesh
 
-After considering the possible transport formats above, we can now analyze the pro and contra arguments. While **structured formats** like YAML and JSON are widely known and easily implemented, they do not offer a builtit mechanism to prevent data manipulation and integrity checking. There are standards that mitigate that matter, but then one can directly use JWT instead of implementing the mechanism by themselves.
+After considering the possible transport formats above, we can now analyze the pro and contra arguments. While **structured formats** like YAML and JSON are widely known and easily implemented, they do not offer a built-in mechanism to prevent data manipulation and integrity checking. There are standards that mitigate that matter, but then one can directly use JWT instead of implementing the mechanism by themselves.
 
 **X509** certificates provide an optimal mechanism to transmit extra data with the certificate itself with "private extensions". They could also be used to enable mTLS between services to further harden the communication between participants of the mesh. However, to enable developers to implement custom translators by themselves, x509 certificates are not optimal since the code to manipulate them depends on the used programming language.
 
@@ -56,11 +56,13 @@ After considering the possible transport formats above, we can now analyze the p
 
 ## A Public Key Infrastructure as Trust Anchor
 
-The implementation of a PKI is vital to the authentication mesh. The participating translators must be able to fetch valid certificates to sign the JWTs they are transmitting. The PKI can be found at: https://github.com/WirePact/k8s-pki. The PKI must fulfill the following use cases:
+The implementation of a PKI is vital to the authentication mesh. The participating translators must be able to fetch valid certificates to sign the JWTs they are transmitting. The PKI can be found at: <https://github.com/WirePact/k8s-pki>. The PKI must fulfill the use cases depicted in {@fig:04_pki_usecases}.
 
-**Provide the root certificate authority (CA).** Any client must have access to the root CA to validate the signatures of received JWTs. The signing certificates of the translators are derived by the CA and can therefore be validated if they are authorized to be part of the mesh.
+![Use Case Diagram for the PKI](diagrams/04_pki_usecases.puml){#fig:04_pki_usecases}
 
-**Provide certificates to participants.** The participating clients (translators) must be able to create a certificate signing request (CSR) and send them to the PKI. The PKI does create valid certificates that are signed with the root CA and then returns the created certificates to the clients. To validate the certificate chain, an interested party can fetch the public part of the root CA via the other mentioned endpoint and check if the chain is valid.
+**Fetch CA Certificate.** Any client must have access to the root CA (certificate authority) to validate the signatures of received JWTs. The signing certificates of the translators are derived by the CA and can therefore be validated if they are authorized to be part of the mesh.
+
+**Sign Certificate Signing Requests.** The participating clients (translators) must be able to create a certificate signing request (CSR) and send them to the PKI. The PKI does create valid certificates that are signed with the root CA and then returns the created certificates to the clients. To validate the certificate chain, an interested party can fetch the public part of the root CA via the other mentioned endpoint and check if the chain is valid.
 
 ### "Gin", a Go HTTP Framework
 
@@ -75,7 +77,7 @@ router.POST("csr", api.HandleCSR)
 
 ### Prepare the CA
 
-Since the implementation targets a local environment (for development) as well as the Kuberentes environment, the CA and the private key can be stored in multiple ways. For local development, the certificate with the private key is created in the local file system. If the PKI runs within Kubernetes, a `Secret` (encrypted data in Kubernetes) shall be used.
+Since the implementation targets a local environment (for development) as well as the Kubernetes environment, the CA and the private key can be stored in multiple ways. For local development, the certificate with the private key is created in the local file system. If the PKI runs within Kubernetes, a `Secret` (encrypted data in Kubernetes) shall be used.
 
 ![Prepare CA method in the PKI on Startup](diagrams/04_pki_prepare_ca.puml){#fig:04_pki_prepare_ca}
 
@@ -91,30 +93,117 @@ ca := &x509.Certificate{
 		Country:      []string{"Kubernetes"},
 		CommonName:   "PKI",
 	},
-	NotBefore:             time.Now(),
-	NotAfter:              time.Now().AddDate(20, 0, 0),
-	IsCA:                  true,
-	ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-	KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+	NotBefore: time.Now(),
+	NotAfter:  time.Now().AddDate(20, 0, 0),
+	IsCA:      true,
+	ExtKeyUsage: []x509.ExtKeyUsage{
+		x509.ExtKeyUsageClientAuth,
+		x509.ExtKeyUsageServerAuth,
+	},
+	KeyUsage: x509.KeyUsageDigitalSignature |
+		x509.KeyUsageCertSign,
 	BasicConstraintsValid: true,
 }
 
 privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 publicKey := &privateKey.PublicKey
-caCert, err := x509.CreateCertificate(rand.Reader, ca, ca, publicKey, privateKey)
+caCert, err := x509.CreateCertificate(
+	rand.Reader,
+	ca,
+	ca,
+	publicKey,
+	privateKey)
 ```
 
-The private key is generated with a cryptographically secure random number generator. After the certificate is generated, it can be encoded and stored in a file or in the Kubernetes secret.
+The private key is generated with a cryptographically secure random number generator. After the certificate is generated, it can be encoded and stored in a file or in the Kubernetes secret. The CA certificate is created with a 20-year lifetime. A further improvement to the system could introduce short-lived certificates to mitigate attacks against the CA.
 
 ### Deliver the CA
 
+As soon as the preparation process in {@fig:04_pki_prepare_ca} has finished, the CA certificate is ready to be delivered in-memory. This process does not need any special processing power. When a `HTTP GET` request to `/ca` arrives, the PKI will return the public certificate part of the root CA to the caller. This call is used by translators and other participants of the authentication mesh to store the currently valid root CA by themselves and to validate the certificate chain.
+
+```go
+context.Header(
+	"Content-Disposition",
+	`attachment; filename="ca-cert.crt"`)
+context.Data(
+	http.StatusOK,
+	"application/x-x509-ca-cert",
+	certificates.GetCA())
+```
+
+The only specialty are the data type headers that are set to `application/x-x509-ca-cert`. While they are not necessary, the headers are added for good practice.
+
+The `GetCA()` method itself just returns the public CA certificate:
+
+```go
+func GetCA() []byte {
+	return pem.EncodeToMemory(
+		&pem.Block{Type: "CERTIFICATE", Bytes: ca.Raw})
+}
+```
+
+The certificates are "PEM" encoded.
+
 ### Process Certificate Signing Requests
 
-## Implementing a Secure Common Identity
+To be able to sign CSRs, as stated in {@fig:04_pki_usecases}, the PKI must be able to parse and understand CSRs. The PKI supports a `HTTP POST` request to `/csr` that receives a body that contains a CSR.
 
-This section describes the process of implementing the common language format and the needed systems for Kubernetes. To use the distributed authentication mesh, a public key infrastructure as well as translators that can validate and interpret JWTs are needed. The implementation is assumed to run on Kubernetes, but the concepts are adaptable to other cloud environments or platforms as well.
+![Invocation sequence to receive a signed certificate from the PKI.](diagrams/04_pki_handlecsr.puml){#fig:04_pki_handlecsr short-caption="Receive Signed Cert from PKI"}
 
-TODO: this describes the translators that use JWT, use the example of the basic auth translator
+The sequence in {@fig:04_pki_handlecsr} runs in the PKI. Since the certificate signing request is prepared with the private key of the translator (or the participant of the mesh), no additional keys must be created. The PKI signs the CSR and returns the valid client certificate to the caller. The caller can now sign data with the private key of the certificate and any receiver is able to validate the integrity with the public part of the certificate. Furthermore, the receiver of data can validate the certificate chain with the root CA from the PKI.
+
+If no CSR is attached to the `HTTP POST` call, or if the body contains an invalid CSR, the PKI will return a `HTTP Bad Request` (status code 400) to the sender and abort the call.
+
+### Authentication and Authorization against the PKI
+
+In the current implementation, no authentication and authorization against the PKI are present. Since the current state of the system shall run within the same trust zone, this is not a big threat vector. However, for further implementations and iterations, a mechanism to "authenticate the authenticator" must be implemented.
+
+A security consideration in the distributed authentication mesh is the possibility that _any_ client can fetch a valid certificate from the PKI and then sign _any_ identity within the system. To harden the PKI against unwanted clients, two possible measures can be taken.
+
+**Use a pre-shared key to authorize valid participants.** With a pre-shared key, all valid participants have the proof of knowledge about something that an attacker should have a hard time to come by. In Kubernetes this could be done with an injected secret or a vault software^[Like "HashiVault" <https://www.vaultproject.io/>].
+
+**Use an intermediate certificate for the PKI.** When the PKI itself is not the absolute trust anchor (the root CA), an intermediate certificate could be delivered as a pre-known secret. Participants would then sign their CSRs with that intermediate certificate and therefore proof that they are valid participants of the mesh.
+
+In either way, both measures require the usage of pre-shared or pre-known secrets. Additional options to mitigate this attack vector are not part of this project and shall be investigated in future work.
+
+## Implementing a Translator with a Secure Common Identity
+
+This section describes the definition and the usage of the secure common identity with the example of a translator. The translator uses HTTP Basic Auth (RFC7617 [@RFC7617]) for the username/password combination. The implementation is hosted on <https://github.com/WirePact/k8s-basic-auth-translator>.
+
+### Define the Common Identity
+
+The distributed authentication mesh needs a single source of truth. It is not possible to recover user information out of arbitrary information. As an example, an application that uses multiple services with OIDC and Basic Auth needs a common "base of users". Even if the authentication mesh is not in place, the services need to know which basic authentication credentials they need to use for a specific user.
+
+![Definition of the Common Identity](diagrams/04_translator_identity_definition.puml){#fig:04_translator_identity_definition}
+
+As shown in {@fig:04_translator_identity_definition}, the definition of the common identity is quite simple. The only field that needs to be transmitted is the `subject` of a user. The `subject` (or `sub`) field is defined in the official public claims of a JWT [@RFC7519, sec. 4.1.2].
+
+### Validate and Encode Outgoing Credentials
+
+Any application that shall be part of the authentication mesh must either call the injected forward proxy by itself, or it should respect the `HTTP_PROXY` environment variable, as done by Go and other languages/frameworks. Outgoing communication ("egress") is processed by the envoy proxy with the external authentication mechanism [@buehler:DistAuthMesh]. The following results exist:
+
+- Skip: Do not process any headers or elements in the request
+- UserID empty: forbidden request
+- Forbidden not empty: for some reason, the request is forbidden
+- UserID not empty: the request is allowed
+
+![Skipped/Ignored Egress Request](diagrams/04_translator_egress_skip.puml){#fig:04_translator_egress_skip}
+
+{@fig:04_translator_egress_skip} shows the sequence if the request is "skipped". In this case, skipped means that no headers are consumed nor added. The request is just passed to the destination without any interference. This happens if, in the case of Basic Auth, no `HTTP Authorize` header is added to the request or if another authentication scheme is used (OIDC for example).
+
+![Unauthorized Egress Request](diagrams/04_translator_egress_no_id.puml){#fig:04_translator_egress_no_id}
+
+{@fig:04_translator_egress_no_id} depicts the process when the request contains a correct HTTP header, but the provided username/password combination is not found in the "repository" of the translator. So, no common user ID can be found for the given username and therefore, the provided authentication information is not valid.
+
+![Forbidden Egress Request](diagrams/04_translator_egress_forbidden.puml){#fig:04_translator_egress_forbidden}
+
+In {@fig:04_translator_egress_forbidden}, the HTTP header is present, but corrupted. For example, if the username/password combination was encoded in the wrong format. If this happens, the proxy will reject the request and never bother the destination with incorrect authentication information.
+
+![Processed Egress Request](diagrams/04_translator_egress_ok.puml){#fig:04_translator_egress_ok}
+
+If a request contains the correct HTTP header, the data within is valid and a user can be found with the username/password combination, {@fig:04_translator_egress_ok} shows the process of the request. The translator instructs the forward proxy to consume (i.e. remove) the HTTP authorize header and injects a new custom HTTP header `x-wirepact-identity`. The new header contains a signed JWT that contains the user ID as the subject and the certificate chains as well as a hash of the signing certificate in its headers.
+
+### Validate and Decode an Incoming Identity
 
 ## Automate the Authentication Mesh
 

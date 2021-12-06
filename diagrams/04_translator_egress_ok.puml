@@ -1,0 +1,21 @@
+@startuml
+!theme cerulean-outline
+
+participant "Application" as a
+participant "Translator" as t
+participant "Destination" as d
+
+a -> t: Create request
+activate t
+    t -> t: Check if "Authorization"\nheader is set
+    t -> t: Try to find UserID\nfor auth header
+    note left
+        The header format is correct
+        and a user is found.
+    end note
+    t -> t: Remove "HTTP Authorize"\nheader
+    t -> t: Add "x-wirepact-identity"\nheader with encoded JWT
+    t -> d: Forward request
+deactivate t
+
+@enduml

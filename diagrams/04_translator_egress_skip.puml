@@ -1,0 +1,14 @@
+@startuml
+!theme cerulean-outline
+
+participant "Application" as a
+participant "Translator" as t
+participant "Destination" as d
+
+a -> t: Create Request
+activate t
+    t -> t: Check if "Authorization"\nheader is set
+    t -> d: Forward Request\nwithout Interference
+deactivate t
+
+@enduml

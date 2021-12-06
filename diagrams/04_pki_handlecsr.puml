@@ -1,0 +1,22 @@
+@startuml
+!theme cerulean-outline
+
+participant "Translator" as t
+participant "PKI" as p
+
+t -> t: Prepare CSR
+
+alt If no body or invalid CSR
+    t -> p: HTTP POST to "/csr"
+    activate p
+    return Bad Request
+else If valid CSR attached
+    t -> p: HTTP POST to "/csr"
+    activate p
+        p -> p: Parse CSR
+        p -> p: Sign CSR with CA
+        p -> p: Encode Certificate
+    return Signed Client Certificate
+end
+
+@enduml

@@ -1,0 +1,19 @@
+@startuml
+!theme cerulean-outline
+
+participant "Application" as a
+participant "Translator" as t
+participant "Destination" as d
+
+a -> t: Create request
+activate t
+    t -> t: Check if "Authorization"\nheader is set
+    t -> t: Try to find UserID\nfor auth header
+    note right
+        The Basic Auth information
+        is corrupted, therefore no
+        ID can be found.
+    end note
+    return Forbidden: header is corrupted
+
+@enduml
