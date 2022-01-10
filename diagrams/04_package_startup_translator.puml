@@ -1,0 +1,20 @@
+@startuml
+!theme cerulean-outline
+
+participant "Translator" as t
+participant "PKI" as p
+
+t -> t : Generate Private Key
+t -> t : Create CSR
+t -> p : Send CSR
+activate p
+p -> p : Sign the CSR
+return Signed Certificate
+
+t -> p : Fetch CA Certificate
+activate p
+return Public CA Certificate
+
+t -> t : Startup TCP Listeners
+
+@enduml

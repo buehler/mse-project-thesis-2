@@ -1,0 +1,17 @@
+@startuml
+!theme cerulean-outline
+
+participant "Translator" as t
+
+[-> t : Outgoing Communication
+activate t
+
+    t -> t : Get JWT Headers\n("x5c", "x5t")
+    t -> t : Configure JWT Claims
+    t -> t : Sign JWT Token
+    t -> t : Attach Mesh Header
+
+t ->] : Forward Request
+deactivate t
+
+@enduml

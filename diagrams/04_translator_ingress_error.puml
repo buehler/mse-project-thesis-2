@@ -1,0 +1,13 @@
+@startuml
+!theme cerulean-outline
+
+participant "Source" as s
+participant "Translator" as t
+participant "Application" as a
+
+s -> t: Incoming request
+activate t
+    t -> t: Some error happens
+return Forbidden
+
+@enduml

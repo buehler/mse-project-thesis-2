@@ -1,0 +1,17 @@
+@startuml
+!theme cerulean-outline
+
+participant "Source" as s
+participant "Translator" as t
+participant "Application" as a
+
+s -> t: Incoming request
+activate t
+    t -> t: Check if "x-wirepact-identity"\nheader is set
+    t -> t: Search for username/password in repostory
+    note left
+        Username/password combination does not exist.
+    end note
+return Forbidden
+
+@enduml

@@ -1,12 +1,12 @@
 \newpage
 
-# State of the Authentication Mesh and the Deficiencies {#sec:state_of_the_art}
+# State of the Authentication Mesh {#sec:state_of_the_art}
 
 This section shows the deficiencies that this project tries to solve. Since this project enhances the concepts of the "Distributed Authentication Mesh", many elements are already defined in the past work.
 
 ## Common Language Format for Communication
 
-The "Distributed Authentication Mesh" defines an architecture that enables a dynamic conversion of user identities in a declarative way [@buehler:DistAuthMesh]. The common language format however, is neither defined nor implemented yet. To enable the possibility of a production-grade software based on the concepts of the authentication mesh, this part must be specified.
+The "Distributed Authentication Mesh" defines an architecture that enables a dynamic conversion of user identities in a declarative way [@buehler:DistAuthMesh]. The common language format however, is neither defined nor implemented yet. Past work did implement a Proof of Concept (PoC) to show the general idea, but did not prove the feasibility with the common langauge format. To enable the possibility of a production-grade software based on the concepts of the authentication mesh, the common language must be defined and specified.
 
 ![General communication flow of two services in the distributed authentication mesh](images/03_scope_common_language_format.png){#fig:03_scope_common_language_format short-caption="Authentication Mesh Communication Flow"}
 
@@ -16,12 +16,12 @@ This common language format is not specified. This project analyzes various form
 
 ## Restricting Access to Services with Rules
 
-In the concept of the authentication mesh, a proxy intercepts the communication from and to applications that are part of the mesh. The interception does not interfere with the data stream. The goal of the proxy is the de-, and encoding of the user identity that is transmitted [@buehler:DistAuthMesh]. To provide additional use for this system, a rule based access engine could enhance the usefulness of the distributed authentication mesh.
+In the concept of the authentication mesh, a proxy intercepts the communication from and to applications that are part of the mesh. The interception does not interfere with the data stream. The goal of the proxy is the de-, and encoding of the user identity that is transmitted [@buehler:DistAuthMesh]. To provide additional use for this system, a rule based access engine could enhance the usefulness of the distributed authentication mesh. Such a rule engine would further improve the security of the overall system.
 
-An additional mechanism ("Rule Engine") could be added to the mesh. This engine takes the configuration from the store and takes place before the translator checks the transmitted identity. A partial list of features could be:
+An additional mechanism ("Rule Engine") could be added to the mesh. This engine takes the configuration from the configuration store and takes place before the translator checks the transmitted identity. A partial list of features could be:
 
 - Timed access: define times when the access to the service is rejected or explicitly allowed.
 - IP range: Define IP ranges that are allowed or blocked. This could prevent cross-datacenter-access.
 - Custom logic: With the power of a small scripting language^[For example [Lua](https://lua.org) or JavaScript with their respective execution environment], custom logic could be built to allow or reject access to services.
 
-The rule engine should be extensible such that additional mechanisms can be included into it. There are other useful filters that help development teams all over the world to create more secure software.
+The rule engine should be extensible such that additional mechanisms can be included into it. There are other useful filters that help development teams all over the world to create more secure software. This rule engine however, is not implemented in this project. This project focuses on the common language used to transmit the user identity as well as the implementation of the authentication mesh in a productive environment. Further work may define and implement the rule engine as an addition to the authentication mesh.

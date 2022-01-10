@@ -1,0 +1,17 @@
+@startuml
+!theme cerulean-outline
+
+participant "Translator" as t
+participant "PKI" as p
+
+t -> p : HTTP GET to "/ca"
+note right
+    Assuming that the PKI is
+    ready to serve clients.
+end note
+
+activate p
+    p -> p: Get CA
+return PEM encoded Public Certificate
+
+@enduml

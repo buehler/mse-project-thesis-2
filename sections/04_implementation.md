@@ -6,16 +6,25 @@ This section analyzes different approaches to create a common language format be
 
 ## Goals and Non-Goals of the Project
 
-This section provides two tables with functional and non-functional requirements for the project. The mentioned tables extend the requirements of the distributed authentication mesh [@buehler:DistAuthMesh, seq. 4.2]. As mentioned, this project enhances the concept of the distributed authentication mesh by analyzing various ways of transmitting the user identity and defining a meaningful way to transport the identity between participants.
+As mentioned, this project enhances the concept of the distributed authentication mesh by analyzing various ways of transmitting the user identity and defining a meaningful way to transport the identity between participants. As such, the goals and non-goals of this project remain the same as in the past work of the distributed authentication mesh [@buehler:DistAuthMesh, ch. 4].
 
-tbl: TODO
+```{.include}
+tables/04_functional_requirements.md
+```
 
-- hashing/integrity check
-- easy to use
+{@tbl:functional-requirements} shows the functional requirements for this project.
+
+```{.include}
+tables/04_non_functional_requirements.md
+```
+
+{@tbl:non-functional-requirements} shows the non-functional requirements for this project.
+
+{@tbl:functional-requirements} and {@tbl:non-functional-requirements} extend the existing requirements from the past work in [@buehler:DistAuthMesh]. In general, the system must not be less secure than the current existing security standards. The definition of the common language format must contain a way to check the integrity of the transmitted data and the translators must not interfere with the data stream and only modify HTTP headers.
 
 ## A Way to Communicate with Integrity
 
-To enable the translators in the distributed authentication mesh to communicate securely, a common format must be used. The format must support a feasible way to prevent modification of the data it transports. The following sections give an overview over the three options that may be used. In the end of the section a comparison shows pro and contra to each option and a decision is made.
+To enable the translators in the distributed authentication mesh to communicate securely, a common format must be used [@buehler:DistAuthMesh]. The format must support a feasible way to prevent modification of the data it transports. The following sections give an overview over the three options that may be used. In the end of the section a comparison shows pro and contra to each option and a decision is made.
 
 ### YAML, XML, JSON, and Others
 
@@ -34,25 +43,27 @@ Similar to "SecJSON", one could add special fields into XML and/or YAML to trans
 
 ### X509 Certificates
 
-The x509 standard (**RFC5280**) defines how certificates shall be used. Today, the connection over HTTPS is done via TLS and certificate encryption. The fields in a certificate are only partially defined. These "standard extensions" are well-known fields such as the "authority" or alternative names for the subject. In the specification, "private extensions" are another possibility to encode data into certificates [@RFC5280, seq. 4.2]. These extensions could be used to transmit the data needed for the distributed authentication mesh.
+The x509 standard (**RFC5280**) defines how certificates shall be used. Today, the connection over HTTPS is done via TLS and certificate encryption. The fields in a certificate are only partially defined. These "standard extensions" are well-known fields such as the "authority" or alternative names for the subject. In the specification, "private extensions" are another possibility to encode data into certificates [@RFC5280, ch. 4]. These extensions could be used to transmit the data needed for the distributed authentication mesh.
 
 Certificates have the big advantage: they can be integrity checked via already implemented hashing mechanisms and provide a "trust anchor"^[A trust anchor is a root for all trust in the system.] in the form of a root certificate authority (root CA). Furthermore, if certificates would be used to transmit the users' identity within the authentication mesh, the certificates could also be used to harden the communication between two services. The certificates can enable mutual TLS (mTLS) between communicating services.
 
-But, implementing custom private fields and manipulating that data is cumbersome in various programming languages. In C\# for example, the code to create a simple x509 certificate can span several hundred lines of code. Go^[<https://go.dev/>] on the other hand, has a much better support for manipulating x509 certificates. Since the result of this project should have a good developer experience, using x509 certificates is not be the best solution to solve the communication and integrity issue.
+But, implementing custom private fields and manipulating that data is cumbersome in various programming languages. In C\# for example, the code to create a simple x509 certificate can span several hundred lines of code. Go^[<https://go.dev/>] on the other hand, has a much better support for manipulating x509 certificates. Since the result of this project should provide a good developer experience, using x509 certificates is not be the best solution to solve the communication and integrity issue. If future work implements mTLS to harden the communication between services, it may be feasible to transmit the users identity within the used certificates.
 
 ### JSON Web Tokens
 
 A plausible way to encode and protect data is to encode them into a JSON web token (JWT). JWTs are used to encode the user identity in OpenID Connect and OAuth 2.0. A JWT contains three parts: A "header", a "payload" and the "signature" [@RFC7519]. The header identifies which algorithm was used to sign the JWT and can contain other arbitrary information. The payload carries the data that shall be transmitted. The last part of the JWT contains the constructed signature of the header and the payload. This signature is constructed by either a symmetrical or asymmetrical hashing algorithm.
 
-To make use of JWTs in the distributed authentication mesh, another technique for JWTs is used: JSON Web Signatures (JWS). JWS represents data that is secured with a digital signature [@RFC7515]. When considering JWT/JWS for the mesh, a signed token that contains the user ID could be used with key material from the PKI to sign the data and provide a way to securely transmit the data. Since the data is not confidential (typically only a user id), it must be signed only. To help prevent extra round trips, the two extra headers `x5c` and `x5t` can be used to transmit the certificate chain as well as a hash of the certificate to the proxy that is checking the data [RFC7515].
+To make use of JWTs in the distributed authentication mesh, another technique for JWTs is used: JSON Web Signatures (JWS). JWS represents data that is secured with a digital signature [@RFC7515]. When considering JWT/JWS for the mesh, a signed token that contains the user ID could be used with key material from the PKI to sign the data and provide a way to securely transmit the data. Since the data is not confidential (typically only a user ID), it must be signed only. To help prevent extra round trips, the two extra headers `x5c` and `x5t` can be used to transmit the certificate chain as well as a hash of the certificate to the proxy that is checking the data [@RFC7515].
+
+In contrast to the above-mentioned "SecJSON", a JWT is well-defined by an RFC. SecJSON enables encrypted data within JSON but does lack the means of integrity checking. A JWT does not encrypt the data but uses JWS for hashing and signing of the data to prevent modification of the data.
 
 ### Using JWT in the Authentication Mesh
 
 After considering the possible transport formats above, we can now analyze the pro and contra arguments. While **structured formats** like YAML and JSON are widely known and easily implemented, they do not offer a built-in mechanism to prevent data manipulation and integrity checking. There are standards that mitigate that matter, but then one can directly use JWT instead of implementing the mechanism by themselves.
 
-**X509** certificates provide an optimal mechanism to transmit extra data with the certificate itself with "private extensions". They could also be used to enable mTLS between services to further harden the communication between participants of the mesh. However, to enable developers to implement custom translators by themselves, x509 certificates are not optimal since the code to manipulate them depends on the used programming language.
+**X509** certificates provide an optimal mechanism to transmit extra data with the certificate itself with "private extensions". They could also be used to enable mTLS between services to further harden the communication between participants of the mesh. However, to enable developers to implement custom translators by themselves, x509 certificates are not optimal since the code to manipulate them heavily depends on the used programming language.
 
-**JWT** uses the best of both worlds. They are asynchronously signed with a x509 certificate private key and can transmit the certificate chain as well as a hash of the signing certificate to prevent manipulation. There exist various libraries for many programming languages like Java, C\# or Go. Also, JWTs are already used in similar situations.
+**JWT** uses the best of both worlds. They are asynchronously signed with a x509 certificate private key and can transmit the certificate chain as well as a hash of the signing certificate to prevent manipulation. There exist various libraries for many programming languages like Java, C\# or Go. Also, JWTs are already used in similar situations like the ID tokens for OpenID Connect.
 
 ## A Public Key Infrastructure as Trust Anchor
 
@@ -60,7 +71,7 @@ The implementation of a PKI is vital to the authentication mesh. The participati
 
 ![Use Case Diagram for the PKI](diagrams/04_pki_usecases.puml){#fig:04_pki_usecases}
 
-**Fetch CA Certificate.** Any client must have access to the root CA (certificate authority) to validate the signatures of received JWTs. The signing certificates of the translators are derived by the CA and can therefore be validated if they are authorized to be part of the mesh.
+**Fetch CA Certificate.** Any translator must have access to the root CA (certificate authority) to validate the signatures of received JWTs. The signing certificates of the translators are derived by the CA and can therefore be validated if they are authorized to be part of the mesh.
 
 **Sign Certificate Signing Requests.** The participating clients (translators) must be able to create a certificate signing request (CSR) and send them to the PKI. The PKI does create valid certificates that are signed with the root CA and then returns the created certificates to the clients. To validate the certificate chain, an interested party can fetch the public part of the root CA via the other mentioned endpoint and check if the chain is valid.
 
@@ -142,9 +153,13 @@ func GetCA() []byte {
 }
 ```
 
-The certificates are "PEM" encoded.
+The certificates are "PEM"^[PEM Encoding: <https://de.wikipedia.org/wiki/Privacy_Enhanced_Mail>] encoded.
 
-### Process Certificate Signing Requests
+![Deliver public certificate invocation](diagrams/04_pki_deliver_ca.puml){#fig:04_pki_deliver_ca}
+
+The process to deliver the CA is not very complex, as is shown in {@fig:04_pki_deliver_ca}. As soon as the startup process in {@fig:04_pki_prepare_ca} is finished, the PKI can return the public part of the certificate to any client that sends a `HTTP GET` to `/ca` of the PKI.
+
+### Process Certificate Signing Requests (CSR)
 
 To be able to sign CSRs, as stated in {@fig:04_pki_usecases}, the PKI must be able to parse and understand CSRs. The PKI supports a `HTTP POST` request to `/csr` that receives a body that contains a CSR.
 
@@ -156,7 +171,7 @@ If no CSR is attached to the `HTTP POST` call, or if the body contains an invali
 
 ### Authentication and Authorization against the PKI
 
-In the current implementation, no authentication and authorization against the PKI are present. Since the current state of the system shall run within the same trust zone, this is not a big threat vector. However, for further implementations and iterations, a mechanism to "authenticate the authenticator" must be implemented.
+In the current implementation, no authentication and authorization against the PKI exist. Since the current state of the system shall run within the same trust zone, this is not a big threat vector. However, for further implementations and iterations, a mechanism to "authenticate the authenticator" must be implemented.
 
 A security consideration in the distributed authentication mesh is the possibility that _any_ client can fetch a valid certificate from the PKI and then sign _any_ identity within the system. To harden the PKI against unwanted clients, two possible measures can be taken.
 
@@ -166,9 +181,9 @@ A security consideration in the distributed authentication mesh is the possibili
 
 In either way, both measures require the usage of pre-shared or pre-known secrets. Additional options to mitigate this attack vector are not part of this project and shall be investigated in future work.
 
-## Implementing a Translator with a Secure Common Identity
+## Provide a Translator Base
 
-This section describes the definition and the usage of the secure common identity with the example of a translator. The translator uses HTTP Basic Auth (RFC7617 [@RFC7617]) for the username/password combination. The implementation is hosted on <https://github.com/WirePact/k8s-basic-auth-translator>.
+To enable developers to create translators easily, the GitHub organization "WirePact"^[WirePact: The development name for the distributed authentication mesh.] provides a translator base package written in Go. This package contains helpers and utilities that are needed in a translator and further provide a developer friendly way to implement a translator. The package is available on the GitHub repository <https://github.com/WirePact/go-translator>.
 
 ### Define the Common Identity
 
@@ -176,7 +191,123 @@ The distributed authentication mesh needs a single source of truth. It is not po
 
 ![Definition of the Common Identity](diagrams/04_translator_identity_definition.puml){#fig:04_translator_identity_definition}
 
-As shown in {@fig:04_translator_identity_definition}, the definition of the common identity is quite simple. The only field that needs to be transmitted is the `subject` of a user. The `subject` (or `sub`) field is defined in the official public claims of a JWT [@RFC7519, sec. 4.1.2].
+As shown in {@fig:04_translator_identity_definition}, the definition of the common identity is quite simple. The only field that needs to be transmitted is the `subject` of a user. The `subject` (or `sub`) field is defined in the official public claims of a JWT [@RFC7519, sec. 4.1.2]. Any additional information that is provided may or may not be used. Since the system is designed to work in a heterogeneous landscape, the common denominator is the users' ID. For some destinations, additional information could be helpful, but it is not guaranteed that the information is available at the source.
+
+### Startup a Translator
+
+When a translator is created with the `NewTranslator()` function of the translator package, a struct type is instantiated that provides some utility functions. Upon creation, the new translators contains two web-servers with the configured ingress and egress ports. Those web-servers are configured to listen to gRPC calls from envoy. The servers in the translator are created but not yet started. They are ready to be run.
+
+![Startup Sequence of a Translator](diagrams/04_package_startup_translator.puml){#fig:04_package_startup_translator}
+
+{@fig:04_package_startup_translator} shows the startup sequence for a translator that was created with the provided package. As soon as the translator gets started (with `translator.Start()`), the translator first ensures its own key material. This means, that a privte key for the local certificate is generated if it does not exist. Further, if the local certificate does not exist, a certificate signing request (CSR) is created and sent to the PKI. Upon success, the PKI returns a valid and signed certificate that the translator can use to sign the JWTs. The last preparation step is to fetch the public part of the CA certificate from the PKI to validate incoming JWTs.
+
+When the preparations for the key material are done, two go routines start the web-servers (listeners) for incoming and outgoing request authentication.
+
+```go
+go func() {
+	logrus.Info("Serving Ingress")
+	err := translator.
+		ingressServer.
+		Serve(*translator.ingressListen)
+	if err != nil {
+		logrus.
+		WithError(err).
+		Fatal("Could not serve ingress.")
+	}
+}()
+```
+
+These listeners are now ready to receive gRPC calls from Envoy. Envoy must be configured to send an authentication check for all intercepted incoming and outgoing calls to the respective destination. The translator now awaits an interrupt, terminate or kill signal to gracefully shut down the listeners.
+
+### Provide Endpoints for Interception
+
+On top of the mentioned listeners are two wrapper methods. A developer provides the ingress and egress function to the library, which in turn then encapsulates the functions with the effective gRPC call from Envoy. When creating a translator, the provided egress function just receives the `CheckRequest` and the ingress function receives a `string` for the parsed subject (user ID) and the `CheckRequest` from Envoy as parameters. They return their respective result (`IngressResult` and `EgressResult`) which then decides the fate of the request.
+
+```go
+result, err := server.EgressTranslator(req)
+if err != nil {
+	return nil, err
+}
+
+if result.Skip {
+	return envoy.CreateNoopOKResponse(), nil
+}
+
+if result.UserID == "" {
+	return envoy.CreateForbiddenResponse(
+		"No UserID given for outbound communication."
+	), nil
+}
+
+if result.Forbidden != "" {
+	return envoy.CreateForbiddenResponse(result.Forbidden),
+		nil
+}
+
+return envoy.CreateEgressOKResponse(
+	server.JWTConfig,
+	result.UserID,
+	result.HeadersToRemove
+)
+```
+
+The function above shows the logic for outgoing (egress) communication. The developer provides the `server.EgressTranslator(req)` implementation at the start of the translator. The package then in turn calls this function and handles the result according to the logic above.
+
+```go
+wirePactJWT, ok := req.Attributes.
+	Request.Http.
+	Headers[wirepact.IdentityHeader]
+if !ok {
+	return envoy.CreateNoopOKResponse(), nil
+}
+
+subject, err := wirepact.GetJWTUserSubject(wirePactJWT)
+if err != nil {
+	return nil, err
+}
+
+result, err := server.IngressTranslator(subject, req)
+if err != nil {
+	return nil, err
+}
+
+if result.Skip {
+	return envoy.CreateNoopOKResponse(), nil
+}
+
+if result.Forbidden != "" {
+	return envoy.CreateForbiddenResponse(
+		result.Forbidden
+	), nil
+}
+
+return envoy.CreateIngressOKResponse(
+	result.HeadersToAdd,
+	append(result.HeadersToRemove, wirepact.IdentityHeader)
+), nil
+```
+
+On the other hand, incoming (ingress) communication requires an extra step. First, a check ensures that the authentication mesh header is present. If not, the request gets forwarded to the destination without any interruption. If a JWT is present, the JWT is decoded and the subject (user ID) extracted. The next step involves the provided `server.IngressTranslator` from the developer that coded the translator. The last step is similar to egress communication, where the result of the translator function is parsed and executed accordingly.
+
+### Encode the JWT
+
+Since the chosen technology to transport the users' identity is a JSON web token, the package provides a simple way to en-, and decode the JWTs. One thing that must be provided to the JWT is the subject (i.e. the users ID). Since we defined that the only required thing for the identity is the user ID (see {@fig:04_translator_identity_definition}), we encode it in the official specified JWT way and name it "sub" (i.e. "subject").
+
+![Encode and Sign a JWT](diagrams/04_package_create_jwt.puml){#fig:04_package_create_jwt}
+
+The logic in {@fig:04_package_create_jwt} shows what happens to a user ID if a JWT shall be created. The JWT headers (`x5c` and `x5t`) are created from the local certificate chain and the fetched CA certificate from the PKI. Those headers are used by the receiving party to check if the JWT is valid and from a participant of the authentication mesh. Next, the JWT claims are configured (subject, issuer, expiry date and so forth) and the token is signed. The signed token is then injected into the HTTP call with a special `x-wirepact-identity` header.
+
+### Decode the JWT
+
+On the receiving side, the process is reversed.
+
+![Decode JWT and Extract Subject](diagrams/04_package_decode_jwt.puml){#fig:04_package_decode_jwt}
+
+{@fig:04_package_decode_jwt} shows the process for incoming communication. When the translator receives a call from the outside world that contains the mesh HTTP header (`x-wirepact-identity`), then the process runs. First, the encoded header data is parsed as JWT. Next, the translator checks, if the encoded certificate chain (`x5c`) is valid and matches its own CA certificate. Then the attached certificate hash (`x5t`) is checked against the signing certificate of the source (which must be the first certificate in the provided certificate chain). The headers that are checked are defined in the JWT specification [@RFC7515]. If a subject can be extracted, the developers code will be called and in the end, the request is forwarded if everything went fine.
+
+## Implementing an HTTP Basic Translator with a Secure Common Identity
+
+This section describes the definition and the usage of the secure common identity with the example of a translator. The translator uses HTTP Basic Auth (RFC7617 [@RFC7617]) for the username/password combination. The implementation is hosted on <https://github.com/WirePact/k8s-basic-auth-translator>.
 
 ### Validate and Encode Outgoing Credentials
 
@@ -204,6 +335,35 @@ In {@fig:04_translator_egress_forbidden}, the HTTP header is present, but corrup
 If a request contains the correct HTTP header, the data within is valid and a user can be found with the username/password combination, {@fig:04_translator_egress_ok} shows the process of the request. The translator instructs the forward proxy to consume (i.e. remove) the HTTP authorize header and injects a new custom HTTP header `x-wirepact-identity`. The new header contains a signed JWT that contains the user ID as the subject and the certificate chains as well as a hash of the signing certificate in its headers.
 
 ### Validate and Decode an Incoming Identity
+
+The transformer also intercepts incoming connections via the external authentication feature of envoy. If a call contains the specified HTTP header (`x-wirepact-identity`) that contains a JWT, the translator tries to validate the information. In general, there exist four different reactions of the translator:
+
+- Skip: if no information is given that relates to the authentication mesh.
+- Error: if any error happens during validation.
+- Forbidden: if the request is forbidden for any reason.
+- OK: if the request is valid and the information about the user could be gathered.
+
+![Skipped/Ingored Ingress Request](diagrams/04_translator_ingress_skip.puml){#fig:04_translator_ingress_skip}
+
+In {@fig:04_translator_ingress_skip}, the process for a neutral request is shown. The request contains no specific information that is relevant for the authentication mesh. Since the translator may not interfere with requests that are not "part of the mesh". The request is skipped and the destination application may handle the request appropriately. As an example, the target application can request the source of the request to sign in. This process allows normal requests to be handled in the mesh. If all requests without mesh information would be blocked, no "normal" request could be sent.
+
+![Errored Ingress Request](diagrams/04_translator_ingress_error.puml){#fig:04_translator_ingress_error}
+
+Error handling in the translator is bound to return forbidden responses. The translator should not throw any errors if possible. But if there are some errors, the translator returns a forbidden request to deny access to the destination as seen in {@fig:04_translator_ingress_error}. If the translator would just skip the request, this could make the system vulnerable against error attacks.
+
+![Forbidden Ingress Request](diagrams/04_translator_ingress_forbidden.puml){#fig:04_translator_ingress_forbidden}
+
+If the incoming request contains an `x-wirepact-identity` and the subject of the user could be extracted successfully, the translator searches for a username/password combination in its repository. If no credentials are found, as shown in {@fig:04_translator_ingress_forbidden}, the request is denied. No valid credentials mean that the translator cannot attach valid basic credentials for the target system.
+
+![Successful Ingress Request](diagrams/04_translator_ingress_ok.puml){#fig:04_translator_ingress_ok}
+
+In contrast to the situations above, {@fig:04_translator_ingress_ok} shows the successful request. If the subject could be parsed, validated and there exists a proper username/password combination in the translators' repository, the translator instructs envoy to consume (i.e. remove) the artificial mesh header and attach the basic authentication header for the target system. In this case, the target system receives valid credentials that it can validate despite the fact that the original source may not have used basic authentication.
+
+### Other Translators
+
+## Implementing an OIDC Translator
+
+TODO: describe oidc translator
 
 ## Automate the Authentication Mesh
 

@@ -1,0 +1,18 @@
+@startuml
+!theme cerulean-outline
+
+participant "Translator" as t
+
+[-> t : Incoming Communication
+activate t
+
+    t -> t : Parse JWT
+    t -> t : Check Certificate Chain ("x5c")
+    t -> t : Check Signing Certificate Hash ("x5t")
+    t -> t : Extract user ID
+    t -> t : Attach Auth Header
+
+t ->] : Forward Request
+deactivate t
+
+@enduml
