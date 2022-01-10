@@ -359,12 +359,6 @@ If the incoming request contains an `x-wirepact-identity` and the subject of the
 
 In contrast to the situations above, {@fig:04_translator_ingress_ok} shows the successful request. If the subject could be parsed, validated and there exists a proper username/password combination in the translators' repository, the translator instructs envoy to consume (i.e. remove) the artificial mesh header and attach the basic authentication header for the target system. In this case, the target system receives valid credentials that it can validate despite the fact that the original source may not have used basic authentication.
 
-### Other Translators
-
-## Implementing an OIDC Translator
-
-TODO: describe oidc translator
-
 ## Automate the Authentication Mesh
 
 TODO: describe the operator
