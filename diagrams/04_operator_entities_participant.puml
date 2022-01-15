@@ -1,0 +1,36 @@
+@startuml
+!theme cerulean-outline
+hide empty methods
+
+interface CustomKubernetesEntity <TSpec, TStatus> {
+  +V1ObjectMeta Metadata
+  +TSpec Spec
+  +TStatus Status
+}
+
+class V1Alpha1MeshParticipant <<Namespace Scope>> implements CustomKubernetesEntity {
+  +V1ObjectMeta Metadata
+  +V1Alpha1MeshParticipantSpec Spec
+  +V1Alpha1MeshParticipantStatus Status
+}
+
+class V1Alpha1MeshParticipantSpec {
+  +string Deployment
+  +int TargetPort
+  +string Service
+  +string Translator
+  +IDictionary<string, string> Env
+  +IList<string> Args
+}
+
+class V1Alpha1MeshParticipantStatus {
+  +int IngressPort
+  +int EgressPort
+  +int TranslatorIngressPort
+  +int TranslatorEgressPort
+}
+
+V1Alpha1MeshParticipant -[hidden]r-> V1Alpha1MeshParticipantSpec
+V1Alpha1MeshParticipant -[hidden]r-> V1Alpha1MeshParticipantStatus
+
+@enduml

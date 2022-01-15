@@ -1,0 +1,24 @@
+@startuml
+!theme cerulean-outline
+
+start
+
+if (Does Secret exist?) then (no)
+    :Create Secret with configured name;
+else (yes)
+endif
+
+if (Does Deployment exist?) then (no)
+    :Create Deployment;
+else (yes)
+endif
+
+if (Does Service exist?) then (no)
+    :Create Service;
+    :Target Service at Deployment;
+else (yes)
+endif
+
+stop
+
+@enduml

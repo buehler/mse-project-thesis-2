@@ -1,0 +1,19 @@
+@startuml
+!theme cerulean-outline
+
+actor Operator as o
+usecase (Ensure PKI) as u1
+usecase (Reconcile PKI) as u2
+usecase (Validate Participants) as u3
+usecase (Reconcile Participants) as u4
+
+o -r-> u1
+o -r-> u2
+o -r-> u3
+o -r-> u4
+
+u1 -[hidden]-> u2
+u2 -[hidden]-> u3
+u3 -[hidden]-> u4
+
+@enduml

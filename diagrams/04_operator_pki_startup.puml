@@ -1,0 +1,13 @@
+@startuml
+!theme cerulean-outline
+
+start
+
+if (Is Any PKI available?) then (no)
+    :Create PKI definition;
+else (yes)
+endif
+
+stop
+
+@enduml

@@ -1,0 +1,21 @@
+@startuml
+!theme cerulean-outline
+hide empty methods
+
+interface CustomKubernetesEntity <TSpec> {
+  +V1ObjectMeta Metadata
+  +TSpec Spec
+}
+
+class V1Alpha1CredentialTranslator <<Cluster Scope>> implements CustomKubernetesEntity {
+  +V1ObjectMeta Metadata
+  +V1Alpha1CredentialTranslatorSpec Spec
+}
+
+class V1Alpha1CredentialTranslatorSpec {
+  +string Image
+}
+
+V1Alpha1CredentialTranslator -[hidden]r-> V1Alpha1CredentialTranslatorSpec
+
+@enduml

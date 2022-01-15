@@ -1,0 +1,30 @@
+@startuml
+!theme cerulean-outline
+hide empty methods
+
+interface CustomKubernetesEntity <TSpec, TStatus> {
+  +V1ObjectMeta Metadata
+  +TSpec Spec
+  +TStatus Status
+}
+
+class V1Alpha1Pki <<Cluster Scope>> implements CustomKubernetesEntity {
+  +V1ObjectMeta Metadata
+  +V1Alpha1PkiSpec Spec
+  +V1Alpha1PkiStatus Status
+}
+
+class V1Alpha1PkiSpec {
+  +string Image
+  +int Port
+  +string SecretName
+}
+
+class V1Alpha1PkiStatus {
+  +string DnsAddress
+}
+
+V1Alpha1Pki -[hidden]r-> V1Alpha1PkiSpec
+V1Alpha1Pki -[hidden]r-> V1Alpha1PkiStatus
+
+@enduml

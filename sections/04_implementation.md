@@ -307,7 +307,7 @@ On the receiving side, the process is reversed.
 
 ## Implementing an HTTP Basic Translator with a Secure Common Identity
 
-This section describes the definition and the usage of the secure common identity with the example of a translator. The translator uses HTTP Basic Auth (RFC7617 [@RFC7617]) for the username/password combination. The implementation is hosted on <https://github.com/WirePact/k8s-basic-auth-translator>.
+This section describes the usage of the secure common identity mentioned above within a translator. The translator uses HTTP Basic Auth (RFC7617 [@RFC7617]) for the username/password combination. The implementation is hosted on <https://github.com/WirePact/k8s-basic-auth-translator>.
 
 ### Validate and Encode Outgoing Credentials
 
@@ -320,7 +320,7 @@ Any application that shall be part of the authentication mesh must either call t
 
 ![Skipped/Ignored Egress Request](diagrams/04_translator_egress_skip.puml){#fig:04_translator_egress_skip}
 
-{@fig:04_translator_egress_skip} shows the sequence if the request is "skipped". In this case, skipped means that no headers are consumed nor added. The request is just passed to the destination without any interference. This happens if, in the case of Basic Auth, no `HTTP Authorize` header is added to the request or if another authentication scheme is used (OIDC for example).
+{@fig:04_translator_egress_skip} shows the sequence if the request is "skipped". In this case, skipped means that no headers are consumed nor added. The request is just passed to the destination without any interference. This happens if, in the case of Basic Auth, no `HTTP Authorize` header is added to the request or if another authentication scheme is used (OIDC for example). The possibility to skip a request enables front-facing applications to still receive normal requests that do not contain any authentication information. As an example, this can happen when an application periodically calls some service that does not need any credentials. The neutral request must not be rejected or forbidden by that fact.
 
 ![Unauthorized Egress Request](diagrams/04_translator_egress_no_id.puml){#fig:04_translator_egress_no_id}
 
@@ -345,20 +345,115 @@ The transformer also intercepts incoming connections via the external authentica
 
 ![Skipped/Ingored Ingress Request](diagrams/04_translator_ingress_skip.puml){#fig:04_translator_ingress_skip}
 
-In {@fig:04_translator_ingress_skip}, the process for a neutral request is shown. The request contains no specific information that is relevant for the authentication mesh. Since the translator may not interfere with requests that are not "part of the mesh". The request is skipped and the destination application may handle the request appropriately. As an example, the target application can request the source of the request to sign in. This process allows normal requests to be handled in the mesh. If all requests without mesh information would be blocked, no "normal" request could be sent.
+In {@fig:04_translator_ingress_skip}, the process for a neutral request is shown. The request contains no specific information that is relevant for the authentication mesh. Since the translator may not interfere with requests that are not "part of the mesh", the request is skipped. The destination application may handle the request appropriately. As an example, the target application can request the source of the request to sign in. This process allows normal requests to be handled in the mesh. If all requests without mesh information would be blocked, no "normal" request could be sent.
 
 ![Errored Ingress Request](diagrams/04_translator_ingress_error.puml){#fig:04_translator_ingress_error}
 
-Error handling in the translator is bound to return forbidden responses. The translator should not throw any errors if possible. But if there are some errors, the translator returns a forbidden request to deny access to the destination as seen in {@fig:04_translator_ingress_error}. If the translator would just skip the request, this could make the system vulnerable against error attacks.
+Error handling in the translator is bound to return forbidden responses. The translator should not throw any errors if possible [@buehler:DistAuthMesh]. But if there are some errors, the translator returns a forbidden request to deny access to the destination as seen in {@fig:04_translator_ingress_error}. If the translator would just skip the request, this could make the system vulnerable against error attacks, where an attacker could force some error to happen in the translator and then reach the destination.
 
 ![Forbidden Ingress Request](diagrams/04_translator_ingress_forbidden.puml){#fig:04_translator_ingress_forbidden}
 
-If the incoming request contains an `x-wirepact-identity` and the subject of the user could be extracted successfully, the translator searches for a username/password combination in its repository. If no credentials are found, as shown in {@fig:04_translator_ingress_forbidden}, the request is denied. No valid credentials mean that the translator cannot attach valid basic credentials for the target system.
+If the incoming request contains an `x-wirepact-identity` HTTP header and the subject of the user could be extracted successfully, the translator searches for a username/password combination in its repository. If no credentials are found, as shown in {@fig:04_translator_ingress_forbidden}, the request is denied. No valid credentials mean that the translator cannot attach valid basic credentials for the target system.
 
 ![Successful Ingress Request](diagrams/04_translator_ingress_ok.puml){#fig:04_translator_ingress_ok}
 
 In contrast to the situations above, {@fig:04_translator_ingress_ok} shows the successful request. If the subject could be parsed, validated and there exists a proper username/password combination in the translators' repository, the translator instructs envoy to consume (i.e. remove) the artificial mesh header and attach the basic authentication header for the target system. In this case, the target system receives valid credentials that it can validate despite the fact that the original source may not have used basic authentication.
 
+### Contrast to an OIDC Translator
+
+Since the HTTP Basic translator mentioned above has a common base with other translators, any other authentication/authorization mechanism can be programmed into a translator. As a further example, and to demonstrate the feasibility of the solution, another translator that handles OpenID Connect (OIDC) was created. The translator resides on GitHub in the repository <https://github.com/WirePact/k8s-keycloak-oidc-translator>.
+
+The OIDC translator is specifically implemented to work in conjunction with a "Keycloak"^[<https://www.keycloak.org/>] instance. Keycloak is an open-source identity and access management (IAM) system that provides the necessary configuration interface to easily use OIDC within your system architecture.
+
+The differences of the OIDC translator to the HTTP Basic Translator are as follows:
+
+- Other configuration (`ISSUER`, `CLIENT_ID`, and `CLIENT_SECRET`) needed
+- Reacts to `Authorization: Bearer ...` headers
+- Fetches user access token via token exchange^[Explained in the documentation of Keycloak: <https://www.keycloak.org/docs/latest/securing_apps/#_token-exchange>]
+
+The basic logic of the translator remains the same. If an outgoing request contains an authorization HTTP header, the header will be consumed. The access token is validated against Keycloak and if it returns a subject (i.e. user-ID) via the introspection endpoint of Keycloak, the ID is encoded in the JWT and then forwarded. On the receiving side, if the specialized custom HTTP header is attached to any request, the translator tries to extract the users' ID from the request. If successful, the translator acquires a valid service-account access token that has the proper permissions on Keycloak to perform a token exchange with impersonation. With the token exchange, the translator is able to create and fetch a valid access token on behalf of the user. The new access token is attached to the HTTP request and forwarded to the destination. As such, the destination can validate the access token and will receive a valid response from Keycloak. This concept can be adapted to other authentication schemes (e.g. LDAP).
+
 ## Automate the Authentication Mesh
 
-TODO: describe the operator
+The basic concept of the distributed authentication mesh allows the usage of the mesh on all possible platforms. Any platform that wants to participate in the mesh must be able to intercept incoming and outgoing traffic and modify HTTP headers [@buehler:DistAuthMesh]. However, in cloud environments such as Kubernetes, software can be added and removed based on manifest files. In {@sec:definitions}, the concept of an Operator shows how the Kubernetes API can be extended to manage complex applications. But an Operator is not bound to "manage applications". During the implementation phase of this project, an Operator was created for the distributed authentication mesh. It allows users of Kubernetes to dynamically add and remove applications to the mesh via Custom Resource Definitions (CRDs).
+
+The open-source code of the Operator is hosted on GitHub in the repository <https://github.com/WirePact/k8s-operator>. The Operator is written in C\# with the help of the operator SDK "KubeOps"^[<https://github.com/buehler/dotnet-operator-sdk>]. "KubeOps" is an SDK that helps with developing Kubernetes Operators. It abstracts certain aspects of Operators, such as the "watcher" logic that needs to be registered within Kubernetes to receive events about certain entities.
+
+Appendix A describes how a demo application can be setup in Kubernetes that shows the behavior of the distributed authentication mesh in conjunction with the Operator.
+
+### Use-Cases for the Operator
+
+The Operator must support certain use-cases to have value in the system. It shall help developers to attach applications to the Distributed Authentication Mesh in a declarative way.
+
+![Use-Case Diagram for the Operator](diagrams/04_operator_usecases.puml){#fig:04_operator_usecases}
+
+{@fig:04_operator_usecases} shows the four primary use-cases of the Operator. They are described in a brief form below.
+
+**Ensure PKI:** The Operator must ensure that there exists a PKI. There must only exist one in the system, otherwise, some participants and translators would use the wrong certificate authority. This results in the inability to communicate with other participants.
+
+**Reconcile PKI:** The Operator is responsible to create a valid and correctly configured "Deployment", as well as a "Service" for the created PKI. The deployment will run the PKI with the configured container image and the service will allow participants and translators to call the PKI via a system-wide DNS address.
+
+**Validate Participants:** When a user tries to create a "mesh participant", the Operator is responsible to check if it is valid. For example, the Operator needs to validate that there exists a deployment target and a service that actually want to participate in the authentication mesh. If one of those vital elements do not exist, the Operator shall reject the participant definition.
+
+**Reconcile Participants:** The Operator reconciles "mesh participants". Thus, when a participant is created, the Operator modifies the target deployment and injects the required sidecars and modifies service ports to route the communication through the injected proxy application. Furthermore, the Operator must configure the proxy correctly.
+
+### Custom Entities for Kubernetes
+
+The Operator uses CRDs to manage and reconcile the participants of the Distributed Authentication Mesh. This section describes the custom entities and their specifications in detail.
+
+#### Credential Translator
+
+![Custom Resource Definition for a Credential Translator](diagrams/04_operator_entities_translator.puml){#fig:04_operator_entities_translator}
+
+The credential translator, as shown in {@fig:04_operator_entities_translator}, is one of the core elements in the authentication mesh and the automation engine. This CRD defines translators that the Operator and a mesh participant may use. These definitions can be seen as the "inventory" of the Operator that contains the effective container images for translators. This enables developers to create custom translators and inject them into the mesh even if the core system does not support the particular authentication translator.
+
+```yaml
+apiVersion: wirepact.ch/v1alpha1
+kind: CredentialTranslator
+metadata:
+  name: basic-auth
+spec:
+  image: ghcr.io/wirepact/k8s-basic-auth-translator:latest
+```
+
+The declaration above shows an example of such a translator. This is the entity that is stored within Kubernetes when the operator is installed. It does enable the Operator to use the HTTP Basic translator mentioned above. Additionally, the Keycloak OIDC translator is available as well.
+
+#### PKI
+
+![Custom Resource Definition for a PKI](diagrams/04_operator_entities_pki.puml){#fig:04_operator_entities_pki}
+
+{@fig:04_operator_entities_pki} shows the definition for a PKI. When the operator fires up, it checks if a PKI already exists. If not, the operator shall create a PKI such that at most one PKI exists for the mesh. The specification contains the container image, a port, and a (Kubernetes-)secret-name. The port defines on which port the PKI will be available for `/ca` and `/csr` calls and the secret name is a reference to a Kubernetes secret. The secret is used to store the serialnumber, ca certificate, and private key for the PKI. The status of the entity shall be updated by the Operator when a PKI is deployed to the cluster. It must contain the DNS address on which the PKI will be reachable.
+
+#### Mesh Participant
+
+![Custom Resource Definition for a Mesh Participant](diagrams/04_operator_entities_participant.puml){#fig:04_operator_entities_participant}
+
+The mesh participant in {@fig:04_operator_entities_participant} enables developers to actually participate in the distributed authentication mesh by defining a deployment and a service. The specification contains the reference to the targeted Kubernetes deployment as well as the Kubernetes service. The target port enables the Operator to correctly configure the Envoy proxy and adjusting the service. The two properties for `Env` and `Args` enable the Operator to setup the translator that is injected as a sidecar into the deployment. It may contain additional environment variables and/or command-line arguments that are attached to the translator. This could be used to configure a translator that needs special information about a user repository or something similar.
+
+```yaml
+apiVersion: wirepact.ch/v1alpha1
+kind: MeshParticipant
+metadata:
+  name: participant
+spec:
+  deployment: deploy
+  service: svc
+  targetPort: 8080
+  translator: keycloak-oidc-translator
+  env:
+    ISSUER: http://keycloak.localhost/
+    CLIENT_ID: demo
+    CLIENT_SECRET: very_secret
+```
+
+The example participant above shows the specification needed to run the Keycloak OIDC translator for a deployment ("deploy") with a specific service ("svc"). The communication on port `8080` shall be intercepted by the mesh and the translator in question is `keycloak-oidc-translator`, for which a `CredentialTranslator` definition with that exact name must exist. As additional environment variables, the issuer, client ID, and client secret variables are passed to the translator such that it can obtain the access tokens from Keycloak.
+
+### Managing the Public Key Infrastructure
+
+One of the use-cases mentioned in {@fig:04_operator_usecases} is managing and reconciling a centralized PKI for the authentication mesh.
+
+TODO.
+
+### Reconciling Authentication Mesh Participants
+
+beschr. participant ctrl
