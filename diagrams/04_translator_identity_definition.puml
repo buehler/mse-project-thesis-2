@@ -3,7 +3,7 @@
 hide empty methods
 
 entity "Identity (JWT)" {
-  String Subject
+  string Subject
 }
 
 @enduml

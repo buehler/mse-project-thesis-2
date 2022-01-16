@@ -1,0 +1,18 @@
+@startuml
+!theme cerulean-outline
+
+(C)
+
+if (Does Envoy Container exist?) then (no)
+    :Create Envoy Container;
+    :Open Envoy Ports;
+    :Attach Config as Volume;
+else (yes)
+    :Check/Update Environment Variables;
+    :Check/Update Ports;
+    :Check/Update Config Volume;
+endif
+
+(D)
+
+@enduml

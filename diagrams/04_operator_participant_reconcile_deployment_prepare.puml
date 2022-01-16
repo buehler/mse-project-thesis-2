@@ -1,0 +1,23 @@
+@startuml
+!theme cerulean-outline
+
+start
+
+if (Does Referenced\nDeployment exist?) then (yes)
+else (no)
+    :Throw Error;
+    end
+endif
+
+if (Are Ports defined?) then (no)
+    :Generate Ports\n(Ingress, Egress, Translator);
+    :Store Ports;
+else (yes)
+endif
+:Return Ports;
+
+:Fetch PKI DNS Address;
+
+(A)
+
+@enduml

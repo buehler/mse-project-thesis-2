@@ -1,0 +1,19 @@
+@startuml
+!theme cerulean-outline
+
+(A)
+
+if (Does Translator Container exist?) then (no)
+    :Create Translator
+    Container with Image;
+    :Attach Environment Variables;
+    :Open Translator Ports;
+    :Inject into Deployment;
+else (yes)
+    :Check/Update Environment Variables;
+    :Check/Update Ports;
+endif
+
+(B)
+
+@enduml

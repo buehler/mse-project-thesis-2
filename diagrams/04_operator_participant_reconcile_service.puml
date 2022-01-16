@@ -1,0 +1,20 @@
+@startuml
+!theme cerulean-outline
+
+start
+
+if (Does Service exist?) then (no)
+    :Throw Error;
+    end
+(yes) elseif (Does Target Port exist?) then (no)
+    :Throw Error;
+    end
+(yes) elseif (Is Target set to "Ingress"?) then (no)
+    :Set Service Target;
+    :Store Original Port;
+else (yes)
+endif
+
+stop
+
+@enduml

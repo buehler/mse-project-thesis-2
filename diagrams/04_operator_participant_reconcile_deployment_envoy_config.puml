@@ -1,0 +1,23 @@
+@startuml
+!theme cerulean-outline
+
+(B)
+
+if (Does Proxy Config exist?) then (no)
+    :Create Config with Ports;
+    :Create Hash from Config;
+    :Store ConfigMap in Kubernetes;
+(yes) elseif (Does ConfigMap Hash match?) then (no)
+        :Update Config and Hash;
+else (yes)
+endif
+
+if (Does Volume exist?) then (no)
+    :Attach Volume with
+    Config to Deployment;
+else (yes)
+endif
+
+(C)
+
+@enduml

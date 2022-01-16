@@ -1,0 +1,16 @@
+@startuml
+!theme cerulean-outline
+
+(D)
+
+while (Other Container Available?)
+    :Get Container;
+    if (Is HTTP_PROXY set?) then (no)
+        :Set HTTP Proxy Variable;
+    else (yes)
+    endif
+endwhile
+
+stop
+
+@enduml

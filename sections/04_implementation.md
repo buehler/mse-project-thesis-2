@@ -446,14 +446,57 @@ spec:
     CLIENT_SECRET: very_secret
 ```
 
-The example participant above shows the specification needed to run the Keycloak OIDC translator for a deployment ("deploy") with a specific service ("svc"). The communication on port `8080` shall be intercepted by the mesh and the translator in question is `keycloak-oidc-translator`, for which a `CredentialTranslator` definition with that exact name must exist. As additional environment variables, the issuer, client ID, and client secret variables are passed to the translator such that it can obtain the access tokens from Keycloak.
+The example participant above shows the specification needed to run the Keycloak OIDC translator for a deployment ("`deploy`") with a specific service ("`svc`"). The communication on port "`8080`" shall be intercepted by the mesh and the translator in question is "`keycloak-oidc-translator`", for which a `CredentialTranslator` definition with that exact name must exist. As additional environment variables, the issuer, client ID, and client secret variables are passed to the translator such that it can obtain the access tokens from Keycloak.
 
 ### Managing the Public Key Infrastructure
 
 One of the use-cases mentioned in {@fig:04_operator_usecases} is managing and reconciling a centralized PKI for the authentication mesh.
 
-TODO.
+![Task for the Startup of the Operator to Ensure a PKI](diagrams/04_operator_pki_startup.puml){#fig:04_operator_pki_startup}
+
+The startup task in {@fig:04_operator_pki_startup} is fairly simple. When the Operator starts, a hosted background service starts (`IHostedService` implementation in .NET) and checks if there are any PKI available. If there are, nothing happens. If not, the Operator creates a PKI entity and stores it within Kubernetes. This will trigger a "normal reconciliation" loop for the entity. This startup process can be further improved by checking the PKI count constantly with a timer instead of just checking when the operator starts. Additionally, a Kubernetes label could ensure that exactly one PKI exists for this particular authentication mesh.
+
+![Reconciliation of a PKI](diagrams/04_operator_pki_reconcile.puml){#fig:04_operator_pki_reconcile}
+
+When a reconciliation loop fires for a PKI definition, the Operator takes several steps to deploy the PKI within its own namespace. {@fig:04_operator_pki_reconcile} shows the steps that are needed to reconcile a PKI. First, the Operator checks if the secret (defined in "`secretName`") exists, then if the deployment and the service exist. If any of those elements does not exist, the Operator creates the entities and stores them within Kubernetes. This reconciliation loop is not very complex and only creates a valid deployment as well as a service to enable access to the PKI within Kubernetes.
 
 ### Reconciling Authentication Mesh Participants
 
-beschr. participant ctrl
+The process to reconcile a mesh participant is more complex than the reconciliation of a PKI. To fulfil the use-case "Reconcile Participants" in {@fig:04_operator_usecases}, the operator needs to adjust the specified deployment and service very heavily. When a reconciliation for a `MeshParticipant` is requested, the Operator performs the following actions one by one:
+
+1. Check if the specified translator (`CredentialTranslator` entity) exists in Kubernetes; if not, throw an error.
+2. Check if the specified deployment (only `V1Deployment` at the time of writing, without `StatefulSet` and other deployment types) exists in the namespace of the participant; if not, throw an error.
+3. Check and update (if needed) the referenced deployment such that it contains the translator and the envoy proxy as a sidecar.
+4. Check and update (if needed) the referenced service such that the correct port of the proxy is used instead of the original one.
+
+It is good practice^[According to Kubernetes and several operator SDKs like "KubeOps"] that an Operator reconciliation loop does not differentiate if an entity was just created or updated within Kubernetes. The reconciliation loop shall check if the desired state still matches the actual state in the system. As such, if the entity gets updated or the Operator is requested to reconcile a participant again by any means, the current objects are checked if they are still valid. As a result, the reconciliation of mesh participants is a complex process. The following two sections show a breakdown of the reconciliation loop for mesh participants.
+
+#### Reconcile the Target Deployment
+
+![Reconcile Mesh Participant - Deployment - Preparation](diagrams/04_operator_participant_reconcile_deployment_prepare.puml){#fig:04_operator_participant_reconcile_deployment_prepare}
+
+When the Operator is required to reconcile a mesh participant, several preparation steps are taken. {@fig:04_operator_participant_reconcile_deployment_prepare} shows the first few actions that reconcile the targeted deployment of a participant. If the referenced deployment does not exist in the given namespace, an error is thrown. Further, if the participant does not contain defined ports (for incoming, outgoing, transformer-incoming, and transformer-outgoing communication), they are created and stored. Otherwise, the ports are returned. The last step in preparation is fetching the DNS address for the PKI.
+
+![Reconcile Mesh Participant - Deployment - Translator Container](diagrams/04_operator_participant_reconcile_deployment_translator_container.puml){#fig:04_operator_participant_reconcile_deployment_translator_container}
+
+When the Operator finishes the preparation in {@fig:04_operator_participant_reconcile_deployment_prepare}, the process in {@fig:04_operator_participant_reconcile_deployment_translator_container} takes place. The Kubernetes deployment is analysed more thoroughly. The first check targets the sidecar for the credential translator. If the container definition does not exist, it is created and the environment variables and ports are configured. Then it is attached to the deployment. If the container did exist, it is validated and checked that all required values are as they should be. This step mitigates the risk that the manifest are editted externally since the Operator will reset any changes to the sidecars.
+
+![Reconcile Mesh Participant - Deployment - Envoy Configuration](diagrams/04_operator_participant_reconcile_deployment_envoy_config.puml){#fig:04_operator_participant_reconcile_deployment_envoy_config}
+
+The next step, as {@fig:04_operator_participant_reconcile_deployment_envoy_config} depicts, is validating the proxy (Envoy) configuration. The config is stored in a `V1ConfigMap` in Kubernetes. The config object contains two properties ("`envoy-config.yaml`" and "`config-hash`") that contain the config and a SHA256 hash of the config. If the config object does not exist, the config is created and stored in the config object with the hash. If it does exist, the hash within the object is checked against the config that **should** be stored. When the hash matches, nothing happens. Otherwise, the generated config is stored along with its hash. After the config is validated, the deployment is searched if the associated volume to bind the config as files exists. If not, it is attached to the deployment.
+
+![Reconcile Mesh Participant - Deployment - Envoy Container](diagrams/04_operator_participant_reconcile_deployment_envoy_container.puml){#fig:04_operator_participant_reconcile_deployment_envoy_container}
+
+Second to last step is checking the Envoy container. {@fig:04_operator_participant_reconcile_deployment_envoy_container} shows these steps. The same technique that checks the translator container in {@fig:04_operator_participant_reconcile_deployment_translator_container} ensures the existance and correctness of the Envoy container. The container contains several environment variables and open ports. Further, the container is injected into the deployment when it does not exist.
+
+![Reconcile Mesh Participant - Deployment - Proxy Environment Variable](diagrams/04_operator_participant_reconcile_deployment_proxy_check.puml){#fig:04_operator_participant_reconcile_deployment_proxy_check}
+
+{@fig:04_operator_participant_reconcile_deployment_proxy_check} shows the last step to reconcile the targeted deployment for a mesh participant. All other containers in the deployment receive an environment variable with the local HTTP proxy. The variable `HTTP_PROXY` contains the value "`http://localhost:{egressPort}`". Since multiple containers in a pod run on the same "machine", they share the same localhost. This enables the Distributed Authentication Mesh to configure the application to use a local running Envoy instance as HTTP proxy. Hence, the application routes its outgoing communication through Envoy which then in turn can communicate with the credential translator.
+
+#### Reconcile the Target Service
+
+In contrast to the target deployment reconciliation explained in the section above, the process to reconcile the targeted service is not as complex.
+
+![Reconcile Mesh Participant - Service](diagrams/04_operator_participant_reconcile_service.puml){#fig:04_operator_participant_reconcile_service}
+
+{@fig:04_operator_participant_reconcile_service} shows the steps to reconcile a target service for a mesh participant. If the service does not exist, or it does not contain the target port that is specified in the participant entity, an error is thrown. The target port for this "external service port" is then changed to "`ingress`". The referenced deployment contains this "ingress" reference as external application port for incoming communication on the Envoy sidecar. As such, all incoming communication on the target port is routed to Envoy. Thus, Envoy can intercept the communication and can consult with the credential translator.
