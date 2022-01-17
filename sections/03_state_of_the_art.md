@@ -6,7 +6,7 @@ This section shows the deficiencies that this project tries to solve. Since this
 
 ## Common Language Format for Communication
 
-The "Distributed Authentication Mesh" defines an architecture that enables a dynamic conversion of user identities in a declarative way [@buehler:DistAuthMesh]. The common language format however, is neither defined nor implemented yet. Past work did implement a Proof of Concept (PoC) to show the general idea, but did not prove the feasibility with the common langauge format. To enable the possibility of a production-grade software based on the concepts of the authentication mesh, the common language must be defined and specified.
+The "Distributed Authentication Mesh" defines an architecture that enables a dynamic conversion of user identities in a declarative way [@buehler:DistAuthMesh]. The common language format however, is neither defined nor implemented yet. Past work did implement a Proof of Concept (PoC) to show the general idea, but did not prove the feasibility with the common language format. To enable the possibility of a production-grade software based on the concepts of the authentication mesh, the common language must be defined and specified.
 
 ![General communication flow of two services in the distributed authentication mesh](images/03_scope_common_language_format.png){#fig:03_scope_common_language_format short-caption="Authentication Mesh Communication Flow"}
 

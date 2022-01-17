@@ -1,6 +1,6 @@
 \newpage
 
-# Implementing a Common Language and Conditional Access
+# Implementing a Common Language and Conditional Access {#sec:implementation}
 
 This section analyzes different approaches to create a common language format between the service of the "Distributed Authentication Mesh". After the analysis, the definition and implementation of the common format enhances the general concept of the Mesh and enables a production-grade software. The PKI and the translators are written in Go, while the Kubernetes Operator is written in C\#. All software is licensed under the **Apache-2.0** license and can be found in the "WirePact" organization: <https://github.com/WirePact>.
 
@@ -47,7 +47,7 @@ The x509 standard (**RFC5280**) defines how certificates shall be used. Today, t
 
 Certificates have the big advantage: they can be integrity checked via already implemented hashing mechanisms and provide a "trust anchor"^[A trust anchor is a root for all trust in the system.] in the form of a root certificate authority (root CA). Furthermore, if certificates would be used to transmit the users' identity within the authentication mesh, the certificates could also be used to harden the communication between two services. The certificates can enable mutual TLS (mTLS) between communicating services.
 
-But, implementing custom private fields and manipulating that data is cumbersome in various programming languages. In C\# for example, the code to create a simple x509 certificate can span several hundred lines of code. Go^[<https://go.dev/>] on the other hand, has a much better support for manipulating x509 certificates. Since the result of this project should provide a good developer experience, using x509 certificates is not be the best solution to solve the communication and integrity issue. If future work implements mTLS to harden the communication between services, it may be feasible to transmit the users identity within the used certificates.
+But, implementing custom private fields and manipulating that data is cumbersome in various programming languages. In C\# for example, the code to create a simple x509 certificate can span several hundred lines of code. Go^[<https://go.dev/>] on the other hand, has a much better support for manipulating x509 certificates. Since the result of this project should provide a good developer experience, using x509 certificates is not be the best solution to solve the communication and integrity issue. If future work implements mTLS to harden the communication between services, it may be feasible to transmit the users' identity within the used certificates.
 
 ### JSON Web Tokens
 
@@ -378,8 +378,6 @@ The basic logic of the translator remains the same. If an outgoing request conta
 The basic concept of the distributed authentication mesh allows the usage of the mesh on all possible platforms. Any platform that wants to participate in the mesh must be able to intercept incoming and outgoing traffic and modify HTTP headers [@buehler:DistAuthMesh]. However, in cloud environments such as Kubernetes, software can be added and removed based on manifest files. In {@sec:definitions}, the concept of an Operator shows how the Kubernetes API can be extended to manage complex applications. But an Operator is not bound to "manage applications". During the implementation phase of this project, an Operator was created for the distributed authentication mesh. It allows users of Kubernetes to dynamically add and remove applications to the mesh via Custom Resource Definitions (CRDs).
 
 The open-source code of the Operator is hosted on GitHub in the repository <https://github.com/WirePact/k8s-operator>. The Operator is written in C\# with the help of the operator SDK "KubeOps"^[<https://github.com/buehler/dotnet-operator-sdk>]. "KubeOps" is an SDK that helps with developing Kubernetes Operators. It abstracts certain aspects of Operators, such as the "watcher" logic that needs to be registered within Kubernetes to receive events about certain entities.
-
-Appendix A describes how a demo application can be setup in Kubernetes that shows the behavior of the distributed authentication mesh in conjunction with the Operator.
 
 ### Use-Cases for the Operator
 
