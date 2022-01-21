@@ -2,29 +2,27 @@
 
 # Implementing a Common Language and Conditional Access {#sec:implementation}
 
-This section analyzes different approaches to create a common language format between the service of the "Distributed Authentication Mesh". After the analysis, the definition and implementation of the common format enhances the general concept of the Mesh and enables a production-grade software. The PKI and the translators are written in Go, while the Kubernetes Operator is written in C\#. All software is licensed under the **Apache-2.0** license and can be found in the "WirePact" organization: <https://github.com/WirePact>.
+This section analyzes different approaches to utilize a common language format between the services of the "Distributed Authentication Mesh". After the analysis, the definition and implementation of the common format enhances the general concept of the Mesh and enables a production-grade software. The PKI and the translators are written in Go, while the Kubernetes Operator is written in C\#. All software is licensed under the **Apache-2.0** license and can be found in the "WirePact" organization on GitHub: <https://github.com/WirePact>.
 
 ## Goals and Non-Goals of the Project
 
 As mentioned, this project enhances the concept of the distributed authentication mesh by analyzing various ways of transmitting the user identity and defining a meaningful way to transport the identity between participants. As such, the goals and non-goals of this project remain the same as in the past work of the distributed authentication mesh [@buehler:DistAuthMesh, ch. 4].
 
-```{.include}
-tables/04_functional_requirements.md
-```
+Additional **functional requirements**:
 
-{@tbl:functional-requirements} shows the functional requirements for this project.
+- The translator generates/parses the common language format.
+- The translator is able to validate the integrity of the transmitted identity.
 
-```{.include}
-tables/04_non_functional_requirements.md
-```
+Additional **non-functional requirements**:
 
-{@tbl:non-functional-requirements} shows the non-functional requirements for this project.
+- The common language contains all needed information to identify a user.
+- The translator acts as proxy for the services behind the mesh. This ensures that requests can be intercepted for applications that are part of the mesh.
 
-{@tbl:functional-requirements} and {@tbl:non-functional-requirements} extend the existing requirements from the past work in [@buehler:DistAuthMesh]. In general, the system must not be less secure than the current existing security standards. The definition of the common language format must contain a way to check the integrity of the transmitted data and the translators must not interfere with the data stream and only modify HTTP headers.
+The two lists above extend the existing requirements from the past work in [@buehler:DistAuthMesh]. In general, the system must not be less secure than the current existing security standards. The definition of the common language format must contain a way to check the integrity of the transmitted data and the translators must not interfere with the data stream and must only modify HTTP headers.
 
 ## A Way to Communicate with Integrity
 
-To enable the translators in the distributed authentication mesh to communicate securely, a common format must be used [@buehler:DistAuthMesh]. The format must support a feasible way to prevent modification of the data it transports. The following sections give an overview over the three options that may be used. In the end of the section a comparison shows pro and contra to each option and a decision is made.
+To enable the translators in the distributed authentication mesh to communicate securely, a common format must be used [@buehler:DistAuthMesh]. The format must support a feasible way to prevent modification of the data it transports. The following sections give an overview over the three options that may be used. In the end of the section a comparison shows pro and contra to each option and a decision towards a format is made.
 
 ### YAML, XML, JSON, and Others
 
@@ -37,15 +35,15 @@ userName: Test User
 
 The example above shows a simple YAML example with an "object" that contains two properties: `userId` and `userName`. These objects can be extended and well typed in programming languages.
 
-There exist approaches like "SecJSON" that enhance JSON with security mechanisms such as data encryption [@santos:SecJSON]. But if the standard of the specifications is used, no integrity check can be performed and the translators of the authentication mesh cannot detect if the data was modified. Thus, using a "simple" structured data format for the transmission of the user identity would not suffice the security requirements of the system.
+There exist approaches like "SecJSON" that enhance JSON with security mechanisms such as data encryption [@santos:SecJSON]. But if the standard of the specification is used, no integrity check can be performed and the translators of the authentication mesh cannot detect if the data was modified. Thus, using a "simple" structured data format for the transmission of the user identity would not suffice the security requirements of the system.
 
-Similar to "SecJSON", one could add special fields into XML and/or YAML to transmit a hash of the data such that the receiver can validate the data. However, using custom fields do not rely on current standards and are therefore prone to errors implementation wise.
+Similar to "SecJSON", one could add special fields into XML and/or YAML to transmit a hash of the data such that the receiver can validate the data. However, using custom fields does not rely on current standards and are therefore prone to errors implementation wise.
 
 ### X509 Certificates
 
 The x509 standard (**RFC5280**) defines how certificates shall be used. Today, the connection over HTTPS is done via TLS and certificate encryption. The fields in a certificate are only partially defined. These "standard extensions" are well-known fields such as the "authority" or alternative names for the subject. In the specification, "private extensions" are another possibility to encode data into certificates [@RFC5280, ch. 4]. These extensions could be used to transmit the data needed for the distributed authentication mesh.
 
-Certificates have the big advantage: they can be integrity checked via already implemented hashing mechanisms and provide a "trust anchor"^[A trust anchor is a root for all trust in the system.] in the form of a root certificate authority (root CA). Furthermore, if certificates would be used to transmit the users' identity within the authentication mesh, the certificates could also be used to harden the communication between two services. The certificates can enable mutual TLS (mTLS) between communicating services.
+Certificates have a big advantage: they can be integrity checked via already implemented hashing mechanisms and provide a "trust anchor"^[A trust anchor is a root for all trust in the system.] in the form of a root certificate authority (root CA). Furthermore, if certificates would be used to transmit the users' identity within the authentication mesh, the certificates could also be used to harden the communication between two services. The certificates can enable mutual TLS (mTLS) between communicating services.
 
 But, implementing custom private fields and manipulating that data is cumbersome in various programming languages. In C\# for example, the code to create a simple x509 certificate can span several hundred lines of code. Go^[<https://go.dev/>] on the other hand, has a much better support for manipulating x509 certificates. Since the result of this project should provide a good developer experience, using x509 certificates is not be the best solution to solve the communication and integrity issue. If future work implements mTLS to harden the communication between services, it may be feasible to transmit the users' identity within the used certificates.
 
@@ -165,21 +163,21 @@ To be able to sign CSRs, as stated in {@fig:04_pki_usecases}, the PKI must be ab
 
 ![Invocation sequence to receive a signed certificate from the PKI.](diagrams/04_pki_handlecsr.puml){#fig:04_pki_handlecsr short-caption="Receive Signed Cert from PKI"}
 
-The sequence in {@fig:04_pki_handlecsr} runs in the PKI. Since the certificate signing request is prepared with the private key of the translator (or the participant of the mesh), no additional keys must be created. The PKI signs the CSR and returns the valid client certificate to the caller. The caller can now sign data with the private key of the certificate and any receiver is able to validate the integrity with the public part of the certificate. Furthermore, the receiver of data can validate the certificate chain with the root CA from the PKI.
+The sequence in {@fig:04_pki_handlecsr} runs in the PKI. Since the certificate signing request is prepared with the private key of the translator (or any other participant of the mesh), no additional keys must be created. The PKI signs the CSR and returns the valid client certificate to the caller. The caller can now sign data with the private key of the certificate and any receiver is able to validate the integrity with the public part of the certificate. Furthermore, the receiver of data can validate the certificate chain with the root CA from the PKI.
 
 If no CSR is attached to the `HTTP POST` call, or if the body contains an invalid CSR, the PKI will return a `HTTP Bad Request` (status code 400) to the sender and abort the call.
 
 ### Authentication and Authorization against the PKI
 
-In the current implementation, no authentication and authorization against the PKI exist. Since the current state of the system shall run within the same trust zone, this is not a big threat vector. However, for further implementations and iterations, a mechanism to "authenticate the authenticator" must be implemented.
+In the current implementation, no authentication and authorization against the PKI exists. Since the current state of the system shall run within the same trust zone, this is not a big threat vector. However, for further implementations and iterations, a mechanism to "authenticate the authenticator" must be implemented.
 
-A security consideration in the distributed authentication mesh is the possibility that _any_ client can fetch a valid certificate from the PKI and then sign _any_ identity within the system. To harden the PKI against unwanted clients, two possible measures can be taken.
+A security consideration in the distributed authentication mesh is the possibility that _any_ client can fetch a valid certificate from the PKI and then sign _any_ identity within the system. To harden the PKI against unwanted clients, two possible actions can be taken.
 
 **Use a pre-shared key to authorize valid participants.** With a pre-shared key, all valid participants have the proof of knowledge about something that an attacker should have a hard time to come by. In Kubernetes this could be done with an injected secret or a vault software^[Like "HashiVault" <https://www.vaultproject.io/>].
 
 **Use an intermediate certificate for the PKI.** When the PKI itself is not the absolute trust anchor (the root CA), an intermediate certificate could be delivered as a pre-known secret. Participants would then sign their CSRs with that intermediate certificate and therefore proof that they are valid participants of the mesh.
 
-In either way, both measures require the usage of pre-shared or pre-known secrets. Additional options to mitigate this attack vector are not part of this project and shall be investigated in future work.
+In either way, both options require the usage of pre-shared or pre-known secrets. Additional options to mitigate this attack vector are not part of this project and shall be investigated in future work.
 
 ## Provide a Translator Base
 
@@ -199,7 +197,7 @@ When a translator is created with the `NewTranslator()` function of the translat
 
 ![Startup Sequence of a Translator](diagrams/04_package_startup_translator.puml){#fig:04_package_startup_translator}
 
-{@fig:04_package_startup_translator} shows the startup sequence for a translator that was created with the provided package. As soon as the translator gets started (with `translator.Start()`), the translator first ensures its own key material. This means, that a privte key for the local certificate is generated if it does not exist. Further, if the local certificate does not exist, a certificate signing request (CSR) is created and sent to the PKI. Upon success, the PKI returns a valid and signed certificate that the translator can use to sign the JWTs. The last preparation step is to fetch the public part of the CA certificate from the PKI to validate incoming JWTs.
+{@fig:04_package_startup_translator} shows the startup sequence for a translator that was created with the provided package. As soon as the translator gets started (with `translator.Start()`), the translator first ensures its own key material. This means, that a private key for the local certificate is generated if it does not exist. Further, if the local certificate does not exist, a certificate signing request (CSR) is created and sent to the PKI. Upon success, the PKI returns a valid and signed certificate that the translator can use to sign the JWTs. The last preparation step is to fetch the public part of the CA certificate from the PKI to validate incoming JWTs.
 
 When the preparations for the key material are done, two go routines start the web-servers (listeners) for incoming and outgoing request authentication.
 
@@ -320,7 +318,7 @@ Any application that shall be part of the authentication mesh must either call t
 
 ![Skipped/Ignored Egress Request](diagrams/04_translator_egress_skip.puml){#fig:04_translator_egress_skip}
 
-{@fig:04_translator_egress_skip} shows the sequence if the request is "skipped". In this case, skipped means that no headers are consumed nor added. The request is just passed to the destination without any interference. This happens if, in the case of Basic Auth, no `HTTP Authorize` header is added to the request or if another authentication scheme is used (OIDC for example). The possibility to skip a request enables front-facing applications to still receive normal requests that do not contain any authentication information. As an example, this can happen when an application periodically calls some service that does not need any credentials. The neutral request must not be rejected or forbidden by that fact.
+{@fig:04_translator_egress_skip} shows the sequence if the request is "skipped". In this case, skipped means that no headers are consumed nor added. The request is just passed to the destination without any interference. This happens if, in the case of Basic Auth, no `HTTP Authorize` header is added to the request or if another authentication scheme is used (OIDC for example). The possibility to skip a request enables front-facing applications to still receive normal requests that do not contain any authentication information. As an example, this can happen when an application periodically calls some service that does not need any credentials. The neutral request must not be rejected or forbidden.
 
 ![Unauthorized Egress Request](diagrams/04_translator_egress_no_id.puml){#fig:04_translator_egress_no_id}
 
@@ -420,13 +418,13 @@ The declaration above shows an example of such a translator. This is the entity 
 
 ![Custom Resource Definition for a PKI](diagrams/04_operator_entities_pki.puml){#fig:04_operator_entities_pki}
 
-{@fig:04_operator_entities_pki} shows the definition for a PKI. When the operator fires up, it checks if a PKI already exists. If not, the operator shall create a PKI such that at most one PKI exists for the mesh. The specification contains the container image, a port, and a (Kubernetes-)secret-name. The port defines on which port the PKI will be available for `/ca` and `/csr` calls and the secret name is a reference to a Kubernetes secret. The secret is used to store the serialnumber, ca certificate, and private key for the PKI. The status of the entity shall be updated by the Operator when a PKI is deployed to the cluster. It must contain the DNS address on which the PKI will be reachable.
+{@fig:04_operator_entities_pki} shows the definition for a PKI. When the operator fires up, it checks if a PKI already exists. If not, the operator shall create a PKI such that at most one PKI exists for the mesh. The specification contains the container image, a port, and a (Kubernetes-)secret-name. The port defines on which port the PKI will be available for `/ca` and `/csr` calls and the secret name is a reference to a Kubernetes secret. The secret is used to store the serial number, ca certificate, and private key for the PKI. The status of the entity shall be updated by the Operator when a PKI is deployed to the cluster. It must contain the DNS address on which the PKI will be reachable.
 
 #### Mesh Participant
 
 ![Custom Resource Definition for a Mesh Participant](diagrams/04_operator_entities_participant.puml){#fig:04_operator_entities_participant}
 
-The mesh participant in {@fig:04_operator_entities_participant} enables developers to actually participate in the distributed authentication mesh by defining a deployment and a service. The specification contains the reference to the targeted Kubernetes deployment as well as the Kubernetes service. The target port enables the Operator to correctly configure the Envoy proxy and adjusting the service. The two properties for `Env` and `Args` enable the Operator to setup the translator that is injected as a sidecar into the deployment. It may contain additional environment variables and/or command-line arguments that are attached to the translator. This could be used to configure a translator that needs special information about a user repository or something similar.
+The mesh participant in {@fig:04_operator_entities_participant} enables developers to actually participate in the distributed authentication mesh by defining a deployment and a service. The specification contains the reference to the targeted Kubernetes deployment as well as the Kubernetes service. The target port enables the Operator to correctly configure the Envoy proxy and adjusting the service. The two properties for `Env` and `Args` enable the Operator to set up the translator that is injected as a sidecar into the deployment. It may contain additional environment variables and/or command-line arguments that are attached to the translator. This could be used to configure a translator that needs special information about a user repository or something similar.
 
 ```yaml
 apiVersion: wirepact.ch/v1alpha1
@@ -477,7 +475,7 @@ When the Operator is required to reconcile a mesh participant, several preparati
 
 ![Reconcile Mesh Participant - Deployment - Translator Container](diagrams/04_operator_participant_reconcile_deployment_translator_container.puml){#fig:04_operator_participant_reconcile_deployment_translator_container}
 
-When the Operator finishes the preparation in {@fig:04_operator_participant_reconcile_deployment_prepare}, the process in {@fig:04_operator_participant_reconcile_deployment_translator_container} takes place. The Kubernetes deployment is analysed more thoroughly. The first check targets the sidecar for the credential translator. If the container definition does not exist, it is created and the environment variables and ports are configured. Then it is attached to the deployment. If the container did exist, it is validated and checked that all required values are as they should be. This step mitigates the risk that the manifest are editted externally since the Operator will reset any changes to the sidecars.
+When the Operator finishes the preparation in {@fig:04_operator_participant_reconcile_deployment_prepare}, the process in {@fig:04_operator_participant_reconcile_deployment_translator_container} takes place. The Kubernetes deployment is analyzed more thoroughly. The first check targets the sidecar for the credential translator. If the container definition does not exist, it is created and the environment variables and ports are configured. Then it is attached to the deployment. If the container did exist, it is validated and checked that all required values are as they should be. This step mitigates the risk that the manifest are edited externally since the Operator will reset any changes to the sidecars.
 
 ![Reconcile Mesh Participant - Deployment - Envoy Configuration](diagrams/04_operator_participant_reconcile_deployment_envoy_config.puml){#fig:04_operator_participant_reconcile_deployment_envoy_config}
 
@@ -485,7 +483,7 @@ The next step, as {@fig:04_operator_participant_reconcile_deployment_envoy_confi
 
 ![Reconcile Mesh Participant - Deployment - Envoy Container](diagrams/04_operator_participant_reconcile_deployment_envoy_container.puml){#fig:04_operator_participant_reconcile_deployment_envoy_container}
 
-Second to last step is checking the Envoy container. {@fig:04_operator_participant_reconcile_deployment_envoy_container} shows these steps. The same technique that checks the translator container in {@fig:04_operator_participant_reconcile_deployment_translator_container} ensures the existance and correctness of the Envoy container. The container contains several environment variables and open ports. Further, the container is injected into the deployment when it does not exist.
+Second to last step is checking the Envoy container. {@fig:04_operator_participant_reconcile_deployment_envoy_container} shows these steps. The same technique that checks the translator container in {@fig:04_operator_participant_reconcile_deployment_translator_container} ensures the existence and correctness of the Envoy container. The container contains several environment variables and open ports. Further, the container is injected into the deployment when it does not exist.
 
 ![Reconcile Mesh Participant - Deployment - Proxy Environment Variable](diagrams/04_operator_participant_reconcile_deployment_proxy_check.puml){#fig:04_operator_participant_reconcile_deployment_proxy_check}
 

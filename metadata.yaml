@@ -1,6 +1,6 @@
 # Metadata
 title: Common Identities in a Distributed Authentication Mesh
-subtitle: Definition and Implementation of a Common Identity for Secure Transport
+subtitle: Definition and Implementation of a Shared Identity for Secure Transport
 author: Christoph Bühler
 date: |
   Autumn Semester 2021\
@@ -21,9 +21,9 @@ documentclass: scrartcl
 toc: true
 numbersections: true
 lof: true
-lot: true
+lot: false
 bibliography: bibliography.bib
-thanks: I'd like to say thank you :)
+thanks: I would like to express my appreciation to Mirko Stocker for guiding and reviewing this work. Furthermore, special thanks to Florian Forster, who provided the initial inspiration and technical expertise of the topic.
 header-includes: |
   \usepackage{float}
   \let\origfigure\figure
